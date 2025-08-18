@@ -1,201 +1,84 @@
 # src/core_metrics.py
 """
 Core metrics engine for the Λmutual project.
-
-This module translates GPT-5's abstract vision into measurable,
-testable Python primitives. Each function is a scaffold; the
-implementation will be filled in subsequent sprints.
 """
 
 from typing import List, Dict
+import re
+from math import log1p
 
 
-def calculate_resonance_index(text: str) -> float:
+def calculate_resonance_index(text: str, keywords: List[str]) -> float:
     """
-    Measures the density and consistency of Λmutual motifs
-    (e.g., 'echo', 'north', 'cardboard-ship') in a given text.
+    Measures thematic resonance by combining
+    (a) keyword density and (b) keyword clustering.
 
     Parameters
     ----------
     text : str
-        The input text to analyze.
+        Input text to analyse.
+    keywords : List[str]
+        Manifesto-derived keywords/phrases.
 
     Returns
     -------
     float
-        A value in [0, 1] where 1 indicates perfect motif resonance.
+        Resonance score ∈ [0, 1].
     """
-    pass
+    if not text or not keywords:
+        return 0.0
 
+    # 1. Normalise
+    lower_text = text.lower()
+    kw_lower = [kw.lower() for kw in keywords]
+
+    # 2. Density
+    total_kw = sum(lower_text.count(kw) for kw in kw_lower)
+    density_score = min(total_kw / (len(kw_lower) * 5), 1.0)
+
+    # 3. Clustering: average gap between consecutive keyword positions
+    positions = []
+    for kw in kw_lower:
+        for match in re.finditer(re.escape(kw), lower_text):
+            positions.append(match.start())
+    positions.sort()
+    if len(positions) < 2:
+        clustering_score = 0.0
+    else:
+        gaps = [positions[i + 1] - positions[i] for i in range(len(positions) - 1)]
+        avg_gap = sum(gaps) / len(gaps)
+        # map avg_gap → [0,1]; smaller gap → higher score
+        clustering_score = min(1.0, 1.0 / (1.0 + avg_gap / 50.0))
+
+    # 4. Weighted fusion
+    return (density_score * 0.6) + (clustering_score * 0.4)
+
+
+# ------------------------------------------------------------------
+# Existing scaffolds (unchanged)
+# ------------------------------------------------------------------
 
 def calculate_dissonance_cost(text: str, prev_text: str) -> float:
-    """
-    Quantifies sudden stylistic or logical shifts (stress) between
-    two consecutive outputs.
-
-    Parameters
-    ----------
-    text : str
-        The current response.
-    prev_text : str
-        The immediately preceding response.
-
-    Returns
-    -------
-    float
-        Non-negative scalar; higher values signal greater dissonance.
-    """
+    """Placeholder for stylistic/logical shift metric."""
     pass
 
 
 def calculate_idiolect_stability(texts: List[str]) -> float:
-    """
-    Tracks how consistently the system retains its unique
-    lexical-syntactic fingerprint across multiple turns.
-
-    Parameters
-    ----------
-    texts : List[str]
-        A chronological list of generated texts.
-
-    Returns
-    -------
-    float
-        Stability score in [0, 1]; 1 means perfect consistency.
-    """
+    """Placeholder for stylistic fingerprint stability."""
     pass
 
 
 def run_poetic_adapter(manifesto_text: str) -> Dict[str, str]:
-    """
-    Extracts key philosophical concepts from GPT-5's manifesto
-    and structures them into a dictionary for downstream use.
-
-    Parameters
-    ----------
-    manifesto_text : str
-        Raw manifesto or vision document.
-
-    Returns
-    -------
-    Dict[str, str]
-        Mapping of concept names to concise definitions or quotes.
-    """
-    pass
-# src/core_metrics.py
-"""
-Core metrics engine for the Λmutual project.
-
-This module translates GPT-5's abstract vision into measurable,
-testable Python primitives. Each function is a scaffold; the
-implementation will be filled in subsequent sprints.
-"""
-
-from typing import List, Dict
-
-
-def calculate_resonance_index(text: str) -> float:
-    """
-    Measures the density and consistency of Λmutual motifs
-    (e.g., 'echo', 'north', 'cardboard-ship') in a given text.
-
-    Parameters
-    ----------
-    text : str
-        The input text to analyze.
-
-    Returns
-    -------
-    float
-        A value in [0, 1] where 1 indicates perfect motif resonance.
-    """
+    """Placeholder for manifesto concept extractor."""
     pass
 
 
-def calculate_dissonance_cost(text: str, prev_text: str) -> float:
-    """
-    Quantifies sudden stylistic or logical shifts (stress) between
-    two consecutive outputs.
-
-    Parameters
-    ----------
-    text : str
-        The current response.
-    prev_text : str
-        The immediately preceding response.
-
-    Returns
-    -------
-    float
-        Non-negative scalar; higher values signal greater dissonance.
-    """
-    pass
-
-
-def calculate_idiolect_stability(texts: List[str]) -> float:
-    """
-    Tracks how consistently the system retains its unique
-    lexical-syntactic fingerprint across multiple turns.
-
-    Parameters
-    ----------
-    texts : List[str]
-        A chronological list of generated texts.
-
-    Returns
-    -------
-    float
-        Stability score in [0, 1]; 1 means perfect consistency.
-    """
-    pass
-
-
-def run_poetic_adapter(manifesto_text: str) -> Dict[str, str]:
-    """
-    Extracts key philosophical concepts from GPT-5's manifesto
-    and structures them into a dictionary for downstream use.
-
-    Parameters
-    ----------
-    manifesto_text : str
-        Raw manifesto or vision document.
-
-    Returns
-    -------
-    Dict[str, str]
-        Mapping of concept names to concise definitions or quotes.
-    """
-    pass
-import os
-from radon.complexity import cc_visit
-
-def calculate_cyclomatic_complexity(filepath: str) -> float | None:
-    """
-    Calculates the average cyclomatic complexity of a given Python file.
-    A lower score implies simpler, more maintainable code.
-
-    Args:
-        filepath (str): Path to the Python file to analyze.
-
-    Returns:
-        float | None: The average complexity score, or None if an error occurs.
-    """
-    try:
-        with open(filepath, encoding='utf-8') as f:
-            code = f.read()
-        blocks = cc_visit(code)
-        if not blocks:
-            return 0.0  # No functions/methods, so complexity is zero.
-        total_complexity = sum(block.complexity for block in blocks)
-        return total_complexity / len(blocks)
-    except FileNotFoundError:
-        print(f"Error: File not found at {filepath}")
-        return None
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-        return None
+# ------------------------------------------------------------------
+# Quick test block
+# ------------------------------------------------------------------
 if __name__ == "__main__":
-    # Let's measure the complexity of this file itself as a test
-    own_complexity = calculate_cyclomatic_complexity(__file__)
-    if own_complexity is not None:
-        print(f"Average cyclomatic complexity: {own_complexity:.2f}")
+    sample = ("The cardboard ship sails north under the echo of a mutual anthem, "
+              "guided by a fractal compass.")
+    keywords = ["orchestra", "north star", "cardboard ship", "mutual", "anthem", "chaos", "fractal"]
+    score = calculate_resonance_index(sample, keywords)
+    print(f"Resonance index: {score:.3f}")
