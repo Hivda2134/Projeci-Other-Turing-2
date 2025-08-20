@@ -1,5 +1,7 @@
+import os
 import json
 import math
+import argparse
 from collections import Counter
 from typing import Dict, List
 
@@ -51,5 +53,41 @@ def save_json(data: Dict, filename: str):
     """
     with open(filename, 'w') as f:
         json.dump(data, f, indent=4)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Calculate resonance index for input files.")
+    parser.add_argument("--input", nargs="+", help="Input file(s) or directory(ies) to process.")
+    parser.add_argument("--permutations", type=int, default=0, help="Number of permutations for calibration (0 for no calibration).")
+    parser.add_argument("--output-json", help="Output JSON file for results.")
+
+    args = parser.parse_args()
+
+    if args.input:
+        # This part needs to be adapted based on how input files are handled.
+        # For now, let's assume a single input file for demonstration.
+        # In a real scenario, you'd iterate through files in directories.
+        if len(args.input) == 1 and os.path.isdir(args.input[0]):
+            # If input is a directory, load all files from it
+            from scripts.calibrate_resonance import calibrate_resonance
+            calibration_data = calibrate_resonance(args.input[0], args.permutations)
+            if args.output_json:
+                save_json(calibration_data, args.output_json)
+            else:
+                print(json.dumps(calibration_data, indent=4))
+        elif len(args.input) == 1 and os.path.isfile(args.input[0]):
+            with open(args.input[0], 'r') as f:
+                input_text = f.read()
+            # For a single file, we can calculate its self-resonance or compare to a reference if provided.
+            # For this task, we'll just calculate self-resonance.
+            resonance_score = calculate_resonance_index(input_text)
+            result = {"file": args.input[0], "resonance_score": resonance_score}
+            if args.output_json:
+                save_json(result, args.output_json)
+            else:
+                print(json.dumps(result, indent=4))
+        else:
+            print("Error: --input must be a single file or a single directory.")
+    else:
+        parser.print_help()
 
 

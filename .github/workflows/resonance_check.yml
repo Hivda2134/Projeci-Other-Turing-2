@@ -1,0 +1,86 @@
+name: Resonance Check CI
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest
+        pip install -e .
+
+    - name: Run pytest
+      run: PYTHONPATH=. pytest
+
+    - name: Run Resonance Metric and Check Threshold
+      id: resonance_check
+      run: |
+        # Generate calibration data if not present (e.g., first run or no calibration.json committed)
+        if [ ! -f calibration.json ]; then
+          echo "calibration.json not found. Running calibration script..."
+          PYTHONPATH=. python scripts/calibrate_resonance.py samples/
+        fi
+
+        # Read the suggested_alert_threshold from calibration.json
+        THRESHOLD=$(jq -r ".suggested_alert_threshold" calibration.json)
+        echo "Suggested Alert Threshold: $THRESHOLD"
+
+        # Run the resonance metric for samples and output to ci_resonance.json
+        PYTHONPATH=. python -m metrics.resonance_metric --input samples/ --output-json ci_resonance.json
+
+        # Read the resonance score from ci_resonance.json (assuming it's an average or single score)
+        # This part needs refinement based on the actual output structure of ci_resonance.json
+        # For now, let's assume ci_resonance.json contains a single 'resonance_score' for the directory.
+        # If it's calibration data, we need to decide how to get a single score for the check.
+        # Let's assume for now that ci_resonance.json will contain a 'total_resonance_score' or similar.
+        # For this task, we'll use the 'aligned_average' from calibration.json as a proxy for the current state's resonance.
+        # This is a simplification and would need a more robust calculation for actual CI.
+        
+        # For the purpose of this task, let's assume the ci_resonance.json will contain a single score
+        # representing the overall resonance of the current samples directory.
+        # If the output of metrics.resonance_metric is calibration data, we need to adapt.
+        # Let's re-evaluate the output of `metrics.resonance_metric` when run with `--input samples/`
+        # The current `metrics/resonance_metric.py` when run with `--input directory` outputs calibration data.
+        # So, ci_resonance.json will be calibration data. We need to check the 'aligned_average' from it.
+
+        CURRENT_RESONANCE=$(jq -r ".aligned_average" ci_resonance.json)
+        echo "Current Resonance Score (aligned_average): $CURRENT_RESONANCE"
+
+        if (( $(echo "$CURRENT_RESONANCE < $THRESHOLD" | bc -l) )); then
+          echo "Resonance score ($CURRENT_RESONANCE) is below the threshold ($THRESHOLD)."
+          echo "::error ::Resonance score is below threshold. Please check the code consistency."
+          echo "status=failure" >> $GITHUB_OUTPUT
+        else
+          echo "Resonance score ($CURRENT_RESONANCE) is above or equal to the threshold ($THRESHOLD)."
+          echo "status=success" >> $GITHUB_OUTPUT
+        fi
+      shell: bash
+
+    - name: Post PR Comment on Failure
+      if: steps.resonance_check.outputs.status == 'failure'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '### Resonance Check Failed!\n\nYour code\'s resonance score is below the calibrated threshold. Please ensure consistency and alignment with project standards.\n\n**Current Resonance:** ${{ steps.resonance_check.outputs.current_resonance_score }}\n**Threshold:** ${{ steps.resonance_check.outputs.threshold }}'
+          })
+
+
