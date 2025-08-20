@@ -5,10 +5,17 @@ on:
     branches: [ main ]
   push:
     branches: [ main ]
+  schedule:
+    - cron: '0 0 * * *' # Run daily at midnight UTC
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10 # Overall job timeout
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4] # Max 4 shards for nightly runs
 
     steps:
     - uses: actions/checkout@v4
@@ -21,7 +28,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest
+        pip install pytest jsonschema pyyaml scikit-learn joblib
         pip install -e .
 
     - name: Run pytest
@@ -29,50 +36,82 @@ jobs:
 
     - name: Run Resonance Metric and Check Threshold
       id: resonance_check
+      env:
+        RESONANCE_PERMUTATIONS: ${{ github.event_name == 'pull_request' && github.event.pull_request.changed_files_count <= 50 && 100 || 0 }} # Budget cap
+        # Add other environment controls for limits here if needed
       run: |
-        # Generate calibration data if not present (e.g., first run or no calibration.json committed)
+        # First, ensure we have a baseline calibration.json
         if [ ! -f calibration.json ]; then
           echo "calibration.json not found. Running calibration script..."
           PYTHONPATH=. python scripts/calibrate_resonance.py samples/
         fi
 
-        # Read the suggested_alert_threshold from calibration.json
-        THRESHOLD=$(jq -r ".suggested_alert_threshold" calibration.json)
+        THRESHOLD=$(python -c "import json; print(json.load(open(\'calibration.json\'))[\"suggested_alert_threshold\"])")
         echo "Suggested Alert Threshold: $THRESHOLD"
 
-        # Run the resonance metric for samples and output to ci_resonance.json
-        PYTHONPATH=. python -m metrics.resonance_metric --input samples/ --output-json ci_resonance.json
+        # Calculate resonance for the *current* state of the samples directory
+        PYTHONPATH=. python -m metrics.resonance_metric --input samples/ --output-json ci_resonance.json --permutations $RESONANCE_PERMUTATIONS
 
-        # Read the resonance score from ci_resonance.json (assuming it's an average or single score)
-        # This part needs refinement based on the actual output structure of ci_resonance.json
-        # For now, let's assume ci_resonance.json contains a single 'resonance_score' for the directory.
-        # If it's calibration data, we need to decide how to get a single score for the check.
-        # Let's assume for now that ci_resonance.json will contain a 'total_resonance_score' or similar.
-        # For this task, we'll use the 'aligned_average' from calibration.json as a proxy for the current state's resonance.
-        # This is a simplification and would need a more robust calculation for actual CI.
-        
-        # For the purpose of this task, let's assume the ci_resonance.json will contain a single score
-        # representing the overall resonance of the current samples directory.
-        # If the output of metrics.resonance_metric is calibration data, we need to adapt.
-        # Let's re-evaluate the output of `metrics.resonance_metric` when run with `--input samples/`
-        # The current `metrics/resonance_metric.py` when run with `--input directory` outputs calibration data.
-        # So, ci_resonance.json will be calibration data. We need to check the 'aligned_average' from it.
+        # Extract the overall resonance score
+        OVERALL_RESONANCE=$(python -c "import json; print(json.load(open(\'ci_resonance.json\'))[\"overall_resonance_score\"])")
+        echo "Overall Resonance Score: $OVERALL_RESONANCE"
 
-        CURRENT_RESONANCE=$(jq -r ".aligned_average" ci_resonance.json)
-        echo "Current Resonance Score (aligned_average): $CURRENT_RESONANCE"
+        # Extract overall risk suspected
+        OVERALL_RISK_SUSPECTED=$(python -c "import json; print(json.load(open(\'ci_resonance.json\'))[\"overall_risk_suspected\"])")
+        echo "Overall Risk Suspected: $OVERALL_RISK_SUSPECTED"
 
-        if (( $(echo "$CURRENT_RESONANCE < $THRESHOLD" | bc -l) )); then
-          echo "Resonance score ($CURRENT_RESONANCE) is below the threshold ($THRESHOLD)."
-          echo "::error ::Resonance score is below threshold. Please check the code consistency."
+        # Check if the overall resonance is below the threshold or if toxic risk is suspected
+        if (( $(echo "$OVERALL_RESONANCE < $THRESHOLD" | bc -l) )) || [ "$OVERALL_RISK_SUSPECTED" = "True" ]; then
+          echo "Resonance check failed!"
+          echo "::error ::Resonance check failed. Please check the code consistency and toxic signals."
           echo "status=failure" >> $GITHUB_OUTPUT
+          echo "overall_resonance_score=$OVERALL_RESONANCE" >> $GITHUB_OUTPUT
+          echo "threshold=$THRESHOLD" >> $GITHUB_OUTPUT
+          echo "overall_risk_suspected=$OVERALL_RISK_SUSPECTED" >> $GITHUB_OUTPUT
         else
-          echo "Resonance score ($CURRENT_RESONANCE) is above or equal to the threshold ($THRESHOLD)."
+          echo "Resonance check passed."
           echo "status=success" >> $GITHUB_OUTPUT
+          echo "overall_resonance_score=$OVERALL_RESONANCE" >> $GITHUB_OUTPUT
+          echo "threshold=$THRESHOLD" >> $GITHUB_OUTPUT
+          echo "overall_risk_suspected=$OVERALL_RISK_SUSPECTED" >> $GITHUB_OUTPUT
         fi
       shell: bash
 
-    - name: Post PR Comment on Failure
+    - name: Upload Resonance Check Artifacts
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: resonance-check-results-${{ matrix.shard }}
+        path: |
+          ci_resonance.json
+          calibration.json
+
+    - name: Create Issue on Failure
       if: steps.resonance_check.outputs.status == 'failure'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const issueTemplate = fs.readFileSync('docs/ISSUE_TEMPLATE/AUTO_REVERT_PROPOSAL.md', 'utf8');
+          const title = `[AUTO-REVERT] Resonance Guard Failure: PR #${context.issue.number} - ${context.sha.substring(0, 7)}`;
+          const body = issueTemplate
+            .replace('### Resonance Guard Failure Detected', '### Resonance Guard Failure Detected')
+            .replace('[Link to failing commit/PR]', context.payload.pull_request ? context.payload.pull_request.html_url : `https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${context.sha}`)
+            .replace('[List of affected files and their resonance/toxic scores]', 'See `ci_resonance.json` artifact for details.')
+            .replace('[Observed Score]', `${process.env.OVERALL_RESONANCE_SCORE}`)
+            .replace('[Threshold Used]', `${process.env.THRESHOLD}`)
+            .replace('[List of detected toxic signals, if any]', `${process.env.OVERALL_RISK_SUSPECTED === 'True' ? 'Toxic signals suspected.' : 'No toxic signals detected.'}`);
+
+          github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: title,
+            body: body,
+            labels: ['bug', 'auto-revert', 'resonance-guard']
+          });
+
+    - name: Post PR Comment on Failure
+      if: steps.resonance_check.outputs.status == 'failure' && github.event_name == 'pull_request'
       uses: actions/github-script@v6
       with:
         script: |
@@ -80,7 +119,6 @@ jobs:
             issue_number: context.issue.number,
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: '### Resonance Check Failed!\n\nYour code\'s resonance score is below the calibrated threshold. Please ensure consistency and alignment with project standards.\n\n**Current Resonance:** ${{ steps.resonance_check.outputs.current_resonance_score }}\n**Threshold:** ${{ steps.resonance_check.outputs.threshold }}'
+            body: `### Resonance Check Failed!\n\nYour code\'s resonance score is below the calibrated threshold or toxic signals were detected. Please ensure consistency and alignment with project standards.\n\n**Overall Resonance:** ${{ steps.resonance_check.outputs.overall_resonance_score }}\n**Threshold:** ${{ steps.resonance_check.outputs.threshold }}\n**Toxic Risk Suspected:** ${{ steps.resonance_check.outputs.overall_risk_suspected }}\n\nFor more details, please check the [Resonance Check Results artifact](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/resonance-check-results-${{ matrix.shard }}).`
           })
-
 
