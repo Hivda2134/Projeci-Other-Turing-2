@@ -4,18 +4,8 @@ import json
 import math
 import argparse
 import sys
-import re
-import yaml
 from collections import Counter
 from typing import Dict, List, Tuple
-
-# Try importing scikit-learn and joblib for ML gate, handle gracefully if not present
-try:
-    from sklearn.linear_model import LogisticRegression
-    import joblib
-    SKLEARN_AVAILABLE = True
-except ImportError:
-    SKLEARN_AVAILABLE = False
 
 # Exit Codes
 EXIT_SUCCESS = 0
@@ -73,6 +63,7 @@ def validate_json_schema(data: Dict, schema_path: str) -> bool:
     Validates data against a JSON schema.
     """
     try:
+        import jsonschema
         with open(schema_path, 'r') as f:
             schema = json.load(f)
         jsonschema.validate(instance=data, schema=schema)
@@ -132,10 +123,6 @@ if __name__ == "__main__":
     parser.add_argument("--print-threshold-source", action="store_true", help="Print the source of the threshold used.")
     parser.add_argument("--validate-schema-only", action="store_true", help="Only validate output schema (requires jsonschema).")
     parser.add_argument("--schema-path", default="schemas/metrics_v1_2.schema.json", help="Path to the JSON schema for validation.")
-    parser.add_argument("--toxic-config", help="Path to toxic signals configuration file.")
-    parser.add_argument("--allowlist", help="Path to allowlist file for toxic signals.")
-    parser.add_argument("--toxic-ml", action="store_true", help="Enable ML-based toxic detection (requires scikit-learn and joblib).")
-    parser.add_argument("--toxic-ml-threshold", type=float, default=0.5, help="Threshold for ML-based toxic detection.")
 
     args = parser.parse_args()
 
@@ -148,8 +135,6 @@ if __name__ == "__main__":
     if args.validate_schema_only:
         try:
             import jsonschema
-            # This is a placeholder. Actual schema validation logic would go here.
-            # For now, we just check if jsonschema is importable.
             print("jsonschema is importable. Schema validation would proceed here.")
             sys.exit(EXIT_SUCCESS)
         except ImportError:
@@ -172,8 +157,6 @@ if __name__ == "__main__":
                 total_resonance = 0.0
                 file_count = 0
                 processed_files = []
-                overall_risk_suspected = False
-                overall_severity = 0.0
 
                 for filename in os.listdir(args.input[0]):
                     filepath = os.path.join(args.input[0], filename)
@@ -182,23 +165,17 @@ if __name__ == "__main__":
                             with open(filepath, "r") as f:
                                 input_text = f.read()
                             resonance_score = calculate_resonance_index(input_text, input_text)
-                            toxic_detection_results = detect_toxic_signals(input_text, args.toxic_config, args.allowlist, args.toxic_ml, args.toxic_ml_threshold, verbose=args.verbose)
 
                             total_resonance += resonance_score
                             file_count += 1
                             
                             file_result = {"file": filename, "resonance_score": resonance_score}
-                            file_result.update(toxic_detection_results)
                             processed_files.append(file_result)
 
-                            if toxic_detection_results["risk_suspected"]:
-                                overall_risk_suspected = True
-                                overall_severity += toxic_detection_results["severity"]
-
-                            if args.verbose: print(f"  File: {filename}, Resonance: {resonance_score:.4f}, Toxic Risk: {toxic_detection_results["risk_suspected"]}")
+                            if args.verbose: print(f"  File: {filename}, Resonance: {resonance_score:.4f}")
                         except Exception as e:
                             if args.verbose: print(f"  Error processing file {filename}: {e}", file=sys.stderr)
-                            processed_files.append({"file": filename, "resonance_score": 0.0, "error": str(e), "risk_suspected": False, "severity": 0.0})
+                            processed_files.append({"file": filename, "resonance_score": 0.0, "error": str(e)})
                             total_resonance += 0.0 # Add 0.0 for files that cause errors
                             file_count += 1 # Count as processed to avoid ZeroDivisionError
 
@@ -207,9 +184,7 @@ if __name__ == "__main__":
                     "overall_resonance_score": avg_resonance,
                     "files": processed_files,
                     "threshold_used": threshold,
-                    "threshold_source": threshold_source,
-                    "overall_risk_suspected": overall_risk_suspected,
-                    "overall_severity": overall_severity
+                    "threshold_source": threshold_source
                 }
                 if args.output_json:
                     save_json(result, args.output_json)
@@ -220,10 +195,9 @@ if __name__ == "__main__":
                 if not validate_json_schema(result, args.schema_path):
                     sys.exit(EXIT_ERROR) # Exit with error if schema validation fails
 
-                if avg_resonance < threshold or overall_risk_suspected:
+                if avg_resonance < threshold:
                     if args.verbose: 
                         if avg_resonance < threshold: print(f"Overall resonance score ({avg_resonance:.4f}) is below threshold ({threshold:.4f}).", file=sys.stderr)
-                        if overall_risk_suspected: print(f"Toxic risk suspected (Severity: {overall_severity:.4f}).", file=sys.stderr)
                     sys.exit(EXIT_FAILURE)
                 else:
                     if args.verbose: print(f"Overall resonance score ({avg_resonance:.4f}) is above or equal to threshold ({threshold:.4f}).")
@@ -234,10 +208,8 @@ if __name__ == "__main__":
                 with open(args.input[0], 'r') as f:
                     input_text = f.read()
                 resonance_score = calculate_resonance_index(input_text)
-                toxic_detection_results = detect_toxic_signals(input_text, args.toxic_config, args.allowlist, args.toxic_ml, args.toxic_ml_threshold, verbose=args.verbose)
 
                 result = {"file": args.input[0], "resonance_score": resonance_score, "threshold_used": threshold, "threshold_source": threshold_source}
-                result.update(toxic_detection_results)
 
                 if args.output_json:
                     save_json(result, args.output_json)
@@ -248,17 +220,16 @@ if __name__ == "__main__":
                 if not validate_json_schema(result, args.schema_path):
                     sys.exit(EXIT_ERROR) # Exit with error if schema validation fails
 
-                if resonance_score < threshold or toxic_detection_results["risk_suspected"]:
+                if resonance_score < threshold:
                     if args.verbose: 
                         if resonance_score < threshold: print(f"Resonance score ({resonance_score:.4f}) is below threshold ({threshold:.4f}).", file=sys.stderr)
-                        if toxic_detection_results["risk_suspected"]: print(f"Toxic risk suspected (Severity: {toxic_detection_results["severity"]:.4f}).", file=sys.stderr)
                     sys.exit(EXIT_FAILURE)
                 else:
                     if args.verbose: print(f"Resonance score ({resonance_score:.4f}) is above or equal to threshold ({threshold:.4f}).")
                     sys.exit(EXIT_SUCCESS)
             except Exception as e:
                 if args.verbose: print(f"Error processing file {args.input[0]}: {e}", file=sys.stderr)
-                result = {"file": args.input[0], "resonance_score": 0.0, "error": str(e), "threshold_used": threshold, "threshold_source": threshold_source, "risk_suspected": False, "severity": 0.0}
+                result = {"file": args.input[0], "resonance_score": 0.0, "error": str(e), "threshold_used": threshold, "threshold_source": threshold_source}
                 if args.output_json:
                     save_json(result, args.output_json)
                 else:

@@ -1,15 +1,13 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Resonance Metric Output Schema v1.2",
-  "description": "Schema for the JSON output of the resonance_metric.py script, including toxic signal detection.",
+  "title": "Resonance Metrics v1.2 (Simplified)",
+  "description": "Schema for the JSON output of the resonance_metric.py script, focusing on core resonance.",
   "type": "object",
   "required": [
     "overall_resonance_score",
     "files",
     "threshold_used",
-    "threshold_source",
-    "overall_risk_suspected",
-    "overall_severity"
+    "threshold_source"
   ],
   "properties": {
     "overall_resonance_score": {
@@ -25,12 +23,7 @@
         "type": "object",
         "required": [
           "file",
-          "resonance_score",
-          "regex_hits",
-          "entropy",
-          "flags",
-          "risk_suspected",
-          "severity"
+          "resonance_score"
         ],
         "properties": {
           "file": {
@@ -42,38 +35,6 @@
             "minimum": 0.0,
             "maximum": 1.0,
             "description": "The resonance score for this specific file."
-          },
-          "regex_hits": {
-            "type": "object",
-            "patternProperties": {
-              ".*": { "type": "integer", "minimum": 0 }
-            },
-            "description": "Counts of each detected regex pattern."
-          },
-          "entropy": {
-            "type": "number",
-            "minimum": 0.0,
-            "description": "The Shannon entropy of the file content."
-          },
-          "ml_prob": {
-            "type": ["number", "null"],
-            "minimum": 0.0,
-            "maximum": 1.0,
-            "description": "Probability of toxicity from ML model, if enabled."
-          },
-          "flags": {
-            "type": "array",
-            "items": { "type": "string" },
-            "description": "List of flags indicating detected issues (e.g., REGEX_MATCH:hex_like, HIGH_ENTROPY, ML_TOXIC)."
-          },
-          "risk_suspected": {
-            "type": "boolean",
-            "description": "True if any toxic signal was detected for this file."
-          },
-          "severity": {
-            "type": "number",
-            "minimum": 0.0,
-            "description": "Overall severity score for toxic signals in this file."
           },
           "error": {
             "type": "string",
@@ -90,15 +51,6 @@
       "type": "string",
       "enum": ["CLI", "config_file", "calibration", "default"],
       "description": "The source from which the threshold was obtained."
-    },
-    "overall_risk_suspected": {
-      "type": "boolean",
-      "description": "True if any toxic signal was detected across all processed files."
-    },
-    "overall_severity": {
-      "type": "number",
-      "minimum": 0.0,
-      "description": "Overall severity score for toxic signals across all processed files."
     }
   },
   "additionalProperties": false
