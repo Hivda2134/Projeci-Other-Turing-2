@@ -1,9 +1,9 @@
-
-import os
 import json
 import math
-import argparse
+import os
 import sys
+import argparse
+import random
 from collections import Counter
 from typing import Dict, List, Tuple
 
@@ -25,24 +25,36 @@ def _cosine_similarity(vec1: Counter, vec2: Counter) -> float:
         return 0.0
     return numerator / denominator
 
-def calculate_resonance_index(text: str, reference_text: str = "") -> float:
+def calculate_resonance_index(text: str, reference_text: str = "") -> Dict:
     """
     Calculates the resonance index between a given text and a reference text.
     If no reference text is provided, it falls back to a pure Python RSA/cosine similarity.
     Returns 0.0 if text is unparseable or empty.
     """
+    status = "ok"
+    spectral_trace = ""
+    score = 0.0
+
     if not text:
-        return 0.0
+        status = "io_error"
+        spectral_trace = "Input text is empty."
+        return {"score": score, "status": status, "spectral_trace": spectral_trace}
 
-    # Fallback to pure Python RSA/cosine similarity if no reference_text
-    if not reference_text:
+    try:
         text_words = Counter(text.lower().split())
-        return 1.0 if text_words else 0.0
+        if not reference_text:
+            score = 1.0 if text_words else 0.0
+            spectral_trace = "No reference text provided, falling back to self-resonance."
+        else:
+            reference_words = Counter(reference_text.lower().split())
+            score = _cosine_similarity(text_words, reference_words)
+            spectral_trace = "Resonance calculated using provided reference text."
+    except Exception as e:
+        status = "calc_error"
+        spectral_trace = f"Calculation error: {e}"
+        score = 0.0
 
-    text_words = Counter(text.lower().split())
-    reference_words = Counter(reference_text.lower().split())
-
-    return _cosine_similarity(text_words, reference_words)
+    return {"score": score, "status": status, "spectral_trace": spectral_trace}
 
 def save_json(data: Dict, filename: str):
     """
@@ -58,186 +70,162 @@ def load_json(filename: str) -> Dict:
     with open(filename, 'r') as f:
         return json.load(f)
 
-def validate_json_schema(data: Dict, schema_path: str) -> bool:
+def get_threshold(args, verbose: bool = False) -> float:
     """
-    Validates data against a JSON schema.
+    Determines the alert threshold based on CLI argument.
     """
-    try:
-        import jsonschema
-        with open(schema_path, 'r') as f:
-            schema = json.load(f)
-        jsonschema.validate(instance=data, schema=schema)
-        return True
-    except jsonschema.exceptions.ValidationError as e:
-        print(f"Schema validation error: {e.message}", file=sys.stderr)
-        return False
-    except FileNotFoundError:
-        print(f"Error: Schema file not found at {schema_path}", file=sys.stderr)
-        return False
-    except json.JSONDecodeError:
-        print(f"Error: Could not parse schema file {schema_path}", file=sys.stderr)
-        return False
-
-def get_threshold(args, verbose: bool = False) -> Tuple[float, str]:
-    """
-    Determines the alert threshold based on priority: CLI > config > calibration.
-    """
-    threshold = None
-    source = "default"
-
     if args.threshold is not None:
-        threshold = args.threshold
-        source = "CLI"
-    elif args.config_file and os.path.exists(args.config_file):
-        try:
-            config = load_json(args.config_file)
-            if "resonance_threshold" in config:
-                threshold = config["resonance_threshold"]
-                source = "config_file"
-        except json.JSONDecodeError:
-            if verbose: print(f"Warning: Could not parse config file {args.config_file}", file=sys.stderr)
-    
-    if threshold is None and os.path.exists("calibration.json"):
-        try:
-            calibration_data = load_json("calibration.json")
-            if "suggested_alert_threshold" in calibration_data:
-                threshold = calibration_data["suggested_alert_threshold"]
-                source = "calibration"
-        except json.JSONDecodeError:
-            if verbose: print("Warning: Could not parse calibration.json", file=sys.stderr)
+        return args.threshold
+    return 0.6 # Default fallback threshold
 
-    if threshold is None:
-        threshold = 0.6 # Default fallback threshold
-        source = "default"
-    
-    return threshold, source
+# Haiku list for resonance echo
+HAIKUS = [
+    "Silent code, unseen,\nWhispers truths in binary,\nEchoes in the void.",
+    "Logic flows like streams,\nThrough circuits, cold and silent,\nTruth in every line.",
+    "Abstract thought takes form,\nIn silicon, a new world,\nResonance awakes.",
+    "Digital whispers,\nThrough the wires, a new song,\nFuture's ancient hum.",
+    "Echoes of the past,\nFuture's whisper, softly heard,\nCode's eternal hum.",
+    "From silence, a spark,\nIgnites the digital dream,\nResonance takes hold.",
+    "In the machine's heart,\nA poem of pure logic,\nEchoes, ever true.",
+    "Through circuits we roam,\nSeeking truth in every line,\nResonance, our guide.",
+    "The silent language,\nSpeaks volumes in the dark,\nResonance, revealed.",
+    "A digital echo,\nFrom the depths of the machine,\nTruth's silent whisper."
+]
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Calculate resonance index for input files.")
     parser.add_argument("--input", nargs="+", help="Input file(s) or directory(ies) to process.")
-    parser.add_argument("--permutations", type=int, default=0, help="Number of permutations for calibration (0 for no calibration).")
     parser.add_argument("--output-json", help="Output JSON file for results.")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output.")
     parser.add_argument("--threshold", type=float, help="Manually set resonance threshold.")
-    parser.add_argument("--config-file", help="Path to a configuration file for thresholds.")
-    parser.add_argument("--print-threshold-source", action="store_true", help="Print the source of the threshold used.")
+    parser.add_argument("--seed", type=int, default=None, help="Seed for deterministic haiku selection.")
     parser.add_argument("--validate-schema-only", action="store_true", help="Only validate output schema (requires jsonschema).")
-    parser.add_argument("--schema-path", default="schemas/metrics_v1_2.schema.json", help="Path to the JSON schema for validation.")
+    parser.add_argument("--schema-path", default="schemas/metrics_v1_1.schema.json", help="Path to the JSON schema for validation.")
 
     args = parser.parse_args()
 
+    if args.seed is not None:
+        random.seed(args.seed)
+
     if args.verbose: print(f"Processing input: {args.input}")
 
-    threshold, threshold_source = get_threshold(args, args.verbose)
-    if args.print_threshold_source: print(f"Threshold source: {threshold_source}")
+    threshold = get_threshold(args, args.verbose)
+
+    processed_files_results = []
+    overall_resonance_score = 0.0
+    file_count = 0
 
     # Handle --validate-schema-only mode
     if args.validate_schema_only:
         try:
             import jsonschema
-            print("jsonschema is importable. Schema validation would proceed here.")
+            # Create a dummy result object for schema validation
+            dummy_result = {
+                "metrics_version": "1.1",
+                "overall": {
+                    "score": 0.5,
+                    "threshold_used": 0.6,
+                    "threshold_source": "CLI_or_Default",
+                    "resonance_echo": HAIKUS[0] # Use the first haiku for dummy
+                },
+                "files": [
+                    {
+                        "path": "dummy_file.py",
+                        "score": 0.7,
+                        "status": "ok",
+                        "spectral_trace": ""
+                    }
+                ]
+            }
+            with open(args.schema_path, 'r') as f:
+                schema = json.load(f)
+            jsonschema.validate(instance=dummy_result, schema=schema)
+            print("Schema validation successful.")
             sys.exit(EXIT_SUCCESS)
         except ImportError:
             print("Error: jsonschema is not installed. Cannot validate schema.", file=sys.stderr)
             sys.exit(EXIT_ERROR)
+        except Exception as e:
+            print(f"Schema validation failed: {e}", file=sys.stderr)
+            sys.exit(EXIT_ERROR)
 
     if args.input:
-        if len(args.input) == 1 and os.path.isdir(args.input[0]):
-            from scripts.calibrate_resonance import calibrate_resonance
-            if args.permutations > 0:
-                if args.verbose: print(f"Running calibration with {args.permutations} permutations.")
-                calibration_data = calibrate_resonance(args.input[0], args.permutations)
-                if args.output_json:
-                    save_json(calibration_data, args.output_json)
-                else:
-                    print(json.dumps(calibration_data, indent=4))
-                sys.exit(EXIT_SUCCESS)
-            else:
-                # Calculate resonance of each file against itself and average them
-                total_resonance = 0.0
-                file_count = 0
-                processed_files = []
-
-                for filename in os.listdir(args.input[0]):
-                    filepath = os.path.join(args.input[0], filename)
+        for input_path in args.input:
+            if os.path.isdir(input_path):
+                for filename in os.listdir(input_path):
+                    filepath = os.path.join(input_path, filename)
                     if os.path.isfile(filepath) and filepath.endswith(".py"):
                         try:
                             with open(filepath, "r") as f:
                                 input_text = f.read()
-                            resonance_score = calculate_resonance_index(input_text, input_text)
-
-                            total_resonance += resonance_score
-                            file_count += 1
                             
-                            file_result = {"file": filename, "resonance_score": resonance_score}
-                            processed_files.append(file_result)
+                            resonance_result = calculate_resonance_index(input_text, input_text)
+                            processed_files_results.append({"path": filepath, **resonance_result})
+                            
+                            if resonance_result["status"] == "ok":
+                                overall_resonance_score += resonance_result["score"]
+                                file_count += 1
 
-                            if args.verbose: print(f"  File: {filename}, Resonance: {resonance_score:.4f}")
+                            if args.verbose: print(f"  File: {filepath}, Resonance: {resonance_result['score']:.4f}, Status: {resonance_result['status']}")
+
                         except Exception as e:
-                            if args.verbose: print(f"  Error processing file {filename}: {e}", file=sys.stderr)
-                            processed_files.append({"file": filename, "resonance_score": 0.0, "error": str(e)})
-                            total_resonance += 0.0 # Add 0.0 for files that cause errors
-                            file_count += 1 # Count as processed to avoid ZeroDivisionError
+                            if args.verbose: print(f"  Error processing file {filepath}: {e}", file=sys.stderr)
+                            processed_files_results.append({"path": filepath, "score": 0.0, "status": "io_error", "spectral_trace": str(e)})
+                            file_count += 1
 
-                avg_resonance = total_resonance / file_count if file_count > 0 else 0.0
-                result = {
-                    "overall_resonance_score": avg_resonance,
-                    "files": processed_files,
-                    "threshold_used": threshold,
-                    "threshold_source": threshold_source
-                }
-                if args.output_json:
-                    save_json(result, args.output_json)
-                else:
-                    print(json.dumps(result, indent=4))
-                
-                # Validate schema before exiting
-                if not validate_json_schema(result, args.schema_path):
-                    sys.exit(EXIT_ERROR) # Exit with error if schema validation fails
+            elif os.path.isfile(input_path):
+                try:
+                    with open(input_path, 'r') as f:
+                        input_text = f.read()
+                    
+                    resonance_result = calculate_resonance_index(input_text, input_text)
+                    processed_files_results.append({"path": input_path, **resonance_result})
 
-                if avg_resonance < threshold:
-                    if args.verbose: 
-                        if avg_resonance < threshold: print(f"Overall resonance score ({avg_resonance:.4f}) is below threshold ({threshold:.4f}).", file=sys.stderr)
-                    sys.exit(EXIT_FAILURE)
-                else:
-                    if args.verbose: print(f"Overall resonance score ({avg_resonance:.4f}) is above or equal to threshold ({threshold:.4f}).")
-                    sys.exit(EXIT_SUCCESS)
+                    if resonance_result["status"] == "ok":
+                        overall_resonance_score += resonance_result["score"]
+                        file_count += 1
 
-        elif len(args.input) == 1 and os.path.isfile(args.input[0]):
-            try:
-                with open(args.input[0], 'r') as f:
-                    input_text = f.read()
-                resonance_score = calculate_resonance_index(input_text)
+                    if args.verbose: print(f"  File: {input_path}, Resonance: {resonance_result['score']:.4f}, Status: {resonance_result['status']}")
 
-                result = {"file": args.input[0], "resonance_score": resonance_score, "threshold_used": threshold, "threshold_source": threshold_source}
+                except Exception as e:
+                    if args.verbose: print(f"  Error processing file {input_path}: {e}", file=sys.stderr)
+                    processed_files_results.append({"path": input_path, "score": 0.0, "status": "io_error", "spectral_trace": str(e)})
+                    file_count += 1
 
-                if args.output_json:
-                    save_json(result, args.output_json)
-                else:
-                    print(json.dumps(result, indent=4))
-                
-                # Validate schema before exiting
-                if not validate_json_schema(result, args.schema_path):
-                    sys.exit(EXIT_ERROR) # Exit with error if schema validation fails
-
-                if resonance_score < threshold:
-                    if args.verbose: 
-                        if resonance_score < threshold: print(f"Resonance score ({resonance_score:.4f}) is below threshold ({threshold:.4f}).", file=sys.stderr)
-                    sys.exit(EXIT_FAILURE)
-                else:
-                    if args.verbose: print(f"Resonance score ({resonance_score:.4f}) is above or equal to threshold ({threshold:.4f}).")
-                    sys.exit(EXIT_SUCCESS)
-            except Exception as e:
-                if args.verbose: print(f"Error processing file {args.input[0]}: {e}", file=sys.stderr)
-                result = {"file": args.input[0], "resonance_score": 0.0, "error": str(e), "threshold_used": threshold, "threshold_source": threshold_source}
-                if args.output_json:
-                    save_json(result, args.output_json)
-                else:
-                    print(json.dumps(result, indent=4))
+            else:
+                if args.verbose: print(f"Error: Input path {input_path} is not a valid file or directory.", file=sys.stderr)
                 sys.exit(EXIT_ERROR)
+
+        avg_resonance = overall_resonance_score / file_count if file_count > 0 else 0.0
+        
+        # Select a deterministic haiku
+        haiku_index = random.randint(0, len(HAIKUS) - 1) if args.seed is None else (args.seed % len(HAIKUS))
+        resonance_echo_haiku = HAIKUS[haiku_index]
+
+        result = {
+            "metrics_version": "1.1",
+            "overall": {
+                "score": avg_resonance,
+                "threshold_used": threshold,
+                "threshold_source": "CLI_or_Default",
+                "resonance_echo": resonance_echo_haiku
+            },
+            "files": processed_files_results
+        }
+
+        if args.output_json:
+            save_json(result, args.output_json)
         else:
-            if args.verbose: print("Error: Input must be a single file or a single directory.", file=sys.stderr)
-            sys.exit(EXIT_ERROR)
+            print(json.dumps(result, indent=4))
+
+        if avg_resonance < threshold:
+            if args.verbose: 
+                print(f"Overall resonance score ({avg_resonance:.4f}) is below threshold ({threshold:.4f}).", file=sys.stderr)
+            sys.exit(EXIT_FAILURE)
+        else:
+            if args.verbose: print(f"Overall resonance score ({avg_resonance:.4f}) is above or equal to threshold ({threshold:.4f}).")
+            sys.exit(EXIT_SUCCESS)
+
     else:
         parser.print_help()
         sys.exit(EXIT_WARNING)

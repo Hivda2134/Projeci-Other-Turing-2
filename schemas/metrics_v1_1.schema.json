@@ -1,0 +1,40 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Resonance Metrics v1.1 Schema",
+    "description": "Schema for the Resonance Guard v2-enterprise+ output.",
+    "type": "object",
+    "required": ["metrics_version", "overall", "files"],
+    "properties": {
+        "metrics_version": {
+            "type": "string",
+            "pattern": "^1\\.1$"
+        },
+        "overall": {
+            "type": "object",
+            "required": ["score", "threshold_used", "threshold_source", "resonance_echo"],
+            "properties": {
+                "score": {"type": "number"},
+                "threshold_used": {"type": "number"},
+                "threshold_source": {"type": "string"},
+                "resonance_echo": {"type": "string"}
+            },
+            "additionalProperties": false
+        },
+        "files": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["path", "score", "status", "spectral_trace"],
+                "properties": {
+                    "path": {"type": "string"},
+                    "score": {"type": "number"},
+                    "status": {"type": "string", "enum": ["ok", "syntax_error", "io_error", "calc_error"]},
+                    "spectral_trace": {"type": "string"}
+                },
+                "additionalProperties": false
+            }
+        }
+    },
+    "additionalProperties": false
+}
+

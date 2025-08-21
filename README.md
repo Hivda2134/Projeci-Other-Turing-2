@@ -6,8 +6,6 @@ This project implements the "Other Turing" paradigm, focusing on measuring AI sy
 
 - **AST Parser**: Extracts symbolic summaries from Python code
 - **Resonance Index**: Measures text/code resonance with RSA/cosine fallback
-- **Calibration System**: Automatically calibrates resonance thresholds
-- **CI/CD Integration**: Automated resonance checks in GitHub Actions
 
 ## CI Resonance Check
 
@@ -15,26 +13,8 @@ The project includes an automated CI system that monitors code resonance to ensu
 
 ### How it Works
 
-1. **Calibration**: The system uses `scripts/calibrate_resonance.py` to analyze sample code files and determine optimal resonance thresholds
-2. **Threshold Detection**: Calibration generates a `calibration.json` file with suggested alert thresholds (typically between 0.5-0.7)
-3. **CI Integration**: GitHub Actions workflow runs resonance checks on every PR and push
-4. **Failure Policy**: If resonance scores fall below the calibrated threshold, the CI fails and posts a comment on the PR
-
-### Overriding Thresholds
-
-To override the default resonance threshold:
-
-1. Modify the `suggested_alert_threshold` value in `calibration.json`
-2. Commit the changes to apply the new threshold
-3. Valid threshold range: 0.5 - 0.7
-
-### Manual Calibration
-
-Run calibration manually:
-
-```bash
-PYTHONPATH=. python scripts/calibrate_resonance.py samples/
-```
+1. **Resonance Calculation**: The system calculates a resonance score for code changes.
+2. **Threshold Check**: If resonance scores fall below a default threshold (currently 0.6), the CI fails.
 
 ### CLI Usage
 
@@ -44,14 +24,23 @@ The resonance metric can be run directly:
 # Analyze a single file
 PYTHONPATH=. python -m metrics.resonance_metric --input file.py --output-json results.json
 
-# Calibrate with permutations
-PYTHONPATH=. python -m metrics.resonance_metric --input samples/ --permutations 200 --output-json calibration.json
+# Enable verbose output and deterministic haiku echo
+PYTHONPATH=. python -m metrics.resonance_metric --input file.py --verbose --seed 42
+
+# Validate the output schema
+PYTHONPATH=. python -m metrics.resonance_metric --validate-schema-only
 ```
+
+## Documentation
+
+*   [Schema Notes v1.1](docs/SCHEMA_NOTES_v1_1.md): Details on the output schema for Resonance Guard.
+*   [Resonance Philosophy](docs/RESONANCE_PHILOSOPHY.md): Explains the concepts of `spectral_trace` and `resonance_echo`.
+*   [Haiku Table](docs/HAIKU_TABLE.md): The fixed set of haikus used for deterministic resonance echoes.
 
 ## Installation
 
 ```bash
-pip install pytest
+pip install pytest jsonschema
 ```
 
 ## Testing
@@ -59,4 +48,5 @@ pip install pytest
 ```bash
 PYTHONPATH=. pytest
 ```
+
 

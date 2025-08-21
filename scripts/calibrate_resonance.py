@@ -33,12 +33,12 @@ def calibrate_resonance(samples_dir: str, num_permutations: int = 200) -> Dict:
 
     for name, code in samples.items():
         # Aligned samples: compare code with itself (should be 1.0)
-        scores["aligned"].append(calculate_resonance_index(code, code))
+        scores["aligned"].append(calculate_resonance_index(code, code)["score"])
 
         # Mismatched samples: compare original code with permuted versions
         for _ in range(num_permutations):
             mismatched_code = _generate_mismatched_sample(code)
-            scores["mismatched"].append(calculate_resonance_index(code, mismatched_code))
+            scores["mismatched"].append(calculate_resonance_index(code, mismatched_code)["score"])
 
     # Calculate score distribution and suggest alert_threshold
     aligned_avg = sum(scores["aligned"]) / len(scores["aligned"])
