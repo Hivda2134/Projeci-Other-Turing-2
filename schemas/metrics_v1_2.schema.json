@@ -1,56 +1,112 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Resonance Metrics v1.2 (Simplified)",
-  "description": "Schema for the JSON output of the resonance_metric.py script, focusing on core resonance.",
+  "title": "Resonance Metrics Schema v1.2",
+  "description": "Schema for the output of the Resonance Guard metric calculation, version 1.2",
   "type": "object",
   "required": [
-    "overall_resonance_score",
-    "files",
-    "threshold_used",
-    "threshold_source"
+    "metrics_version",
+    "overall",
+    "files"
   ],
   "properties": {
-    "overall_resonance_score": {
-      "type": "number",
-      "minimum": 0.0,
-      "maximum": 1.0,
-      "description": "The average resonance score across all processed files in a directory, or the score for a single file."
+    "metrics_version": {
+      "type": "string",
+      "pattern": "^1\\.[2-9]$",
+      "description": "Version of the metrics schema. Must be 1.2 or higher."
+    },
+    "overall": {
+      "type": "object",
+      "required": [
+        "score",
+        "threshold_used",
+        "threshold_source",
+        "resonance_echo",
+        "processing_time_ms",
+        "status",
+        "spectral_trace"
+      ],
+      "properties": {
+        "score": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Overall resonance score, a float between 0.0 and 1.0."
+        },
+        "threshold_used": {
+          "type": "number",
+          "description": "The threshold value used for this calculation."
+        },
+        "threshold_source": {
+          "type": "string",
+          "enum": ["CLI_or_Default", "Config_File", "Environment_Variable"],
+          "description": "Source of the threshold value."
+        },
+        "resonance_echo": {
+          "type": "string",
+          "description": "A deterministic haiku reflecting the run's 'spirit'."
+        },
+        "processing_time_ms": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Total processing time in milliseconds."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["ok", "partial_error", "budget_exceeded"],
+          "description": "Overall status of the processing."
+        },
+        "spectral_trace": {
+          "type": "string",
+          "description": "A trace message providing more details about the overall status."
+        }
+      },
+      "additionalProperties": false
     },
     "files": {
       "type": "array",
-      "description": "Details for each processed file.",
       "items": {
         "type": "object",
         "required": [
-          "file",
-          "resonance_score"
+          "path",
+          "score",
+          "status",
+          "spectral_trace",
+          "size_bytes",
+          "parse_time_ms"
         ],
         "properties": {
-          "file": {
+          "path": {
             "type": "string",
-            "description": "The name of the processed file."
+            "description": "Path to the processed file."
           },
-          "resonance_score": {
+          "score": {
             "type": "number",
             "minimum": 0.0,
             "maximum": 1.0,
-            "description": "The resonance score for this specific file."
+            "description": "Resonance score for the individual file."
           },
-          "error": {
+          "status": {
             "type": "string",
-            "description": "Error message if processing of the file failed."
+            "enum": ["ok", "syntax_error", "io_error", "calc_error", "budget_exceeded"],
+            "description": "Status of processing for the individual file."
+          },
+          "spectral_trace": {
+            "type": "string",
+            "description": "A trace message providing more details about the file's status."
+          },
+          "size_bytes": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Size of the file in bytes."
+          },
+          "parse_time_ms": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Time taken to parse and process the file in milliseconds."
           }
-        }
+        },
+        "additionalProperties": false
       }
-    },
-    "threshold_used": {
-      "type": "number",
-      "description": "The resonance threshold used for evaluation."
-    },
-    "threshold_source": {
-      "type": "string",
-      "enum": ["CLI", "config_file", "calibration", "default"],
-      "description": "The source from which the threshold was obtained."
     }
   },
   "additionalProperties": false
