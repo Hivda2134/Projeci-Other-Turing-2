@@ -1,0 +1,18 @@
+{
+    "meta": {
+        "seed": 42,
+        "timestamp": "2025-08-24T08:23:24Z",
+        "engine": "v1.2"
+    },
+    "high": {
+        "score": 0.3311,
+        "spectral_trace": "Resonance calculated using provided reference text.",
+        "ghost_echo": "Abstract thought takes form, In silicon, a new world, Resonance awakes."
+    },
+    "low": {
+        "score": 0.0889,
+        "spectral_trace": "Resonance calculated using provided reference text.",
+        "ghost_echo": "Abstract thought takes form, In silicon, a new world, Resonance awakes."
+    },
+    "delta": 0.2422
+}
