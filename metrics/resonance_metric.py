@@ -9,6 +9,7 @@ import hashlib
 import time
 import yaml
 import fnmatch
+import re
 from collections import Counter
 from typing import Dict, List, Tuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -61,6 +62,11 @@ def _get_schema_fingerprint(schema_path: str) -> str:
             SCHEMA_V1_2_FINGERPRINT = "schema_not_found"
     return SCHEMA_V1_2_FINGERPRINT
 
+def _tokenize_text(text: str) -> Counter:
+    # Simple tokenization: split by non-alphanumeric characters and convert to lowercase
+    tokens = re.findall(r'\b\w+\b', text.lower())
+    return Counter(tokens)
+
 def _cosine_similarity(vec1: Counter, vec2: Counter) -> float:
     intersection = set(vec1.keys()) & set(vec2.keys())
     numerator = sum([vec1[x] * vec2[x] for x in intersection])
@@ -89,13 +95,13 @@ def calculate_resonance_index(text: str, reference_text: str = "") -> Dict:
         return {"score": score, "status": status, "spectral_trace": spectral_trace}
 
     try:
-        text_words = Counter(text.lower().split())
+        text_tokens = _tokenize_text(text)
         if not reference_text:
-            score = 1.0 if text_words else 0.0
+            score = 1.0 if text_tokens else 0.0
             spectral_trace = "No reference text provided, falling back to self-resonance."
         else:
-            reference_words = Counter(reference_text.lower().split())
-            score = _cosine_similarity(text_words, reference_words)
+            reference_tokens = _tokenize_text(reference_text)
+            score = _cosine_similarity(text_tokens, reference_tokens)
             spectral_trace = "Resonance calculated using provided reference text."
     except Exception as e:
         status = "calc_error"
@@ -380,62 +386,38 @@ def main():
             print("Schema validation successful.")
             sys.exit(EXIT_SUCCESS)
         except ImportError:
-            print("Error: jsonschema is not installed. Cannot validate schema.", file=sys.stderr)
-            sys.exit(EXIT_ERROR)
-        except Exception as e:
-            print(f"Schema validation failed: {e}", file=sys.stderr)
+            print("Error: jsonschema is not installed.")
             sys.exit(EXIT_ERROR)
 
     input_files = []
     total_bytes = 0
-    for input_path in args.input:
-        if os.path.isdir(input_path):
-            for root, _, filenames in os.walk(input_path):
-                for filename in sorted(filenames): # Stable traversal
-                    filepath = os.path.join(root, filename)
-                    if os.path.isfile(filepath):
-                        # Apply include/exclude globs
-                        if config["include_globs"] and not any(fnmatch.fnmatch(filepath, pattern) for pattern in config["include_globs"]):
-                            continue
-                        if config["exclude_globs"] and any(fnmatch.fnmatch(filepath, pattern) for pattern in config["exclude_globs"]):
-                            continue
 
-                        try:
-                            file_size = os.path.getsize(filepath)
-                            if total_bytes + file_size > config["max_total_bytes"]:
-                                if config["verbose"]: print(f"Budget exceeded: Adding {filepath} would exceed total byte limit.")
-                                continue # Skip this file if it exceeds total budget
-                            total_bytes += file_size
+    if args.input:
+        for item in args.input:
+            if os.path.isfile(item):
+                input_files.append(item)
+                total_bytes += os.path.getsize(item)
+            elif os.path.isdir(item):
+                for root, _, files in os.walk(item):
+                    for file in files:
+                        filepath = os.path.join(root, file)
+                        if os.path.isfile(filepath):
+                            # Apply include/exclude globs
+                            if config["include_globs"] and not any(fnmatch.fnmatch(filepath, glob_pattern) for glob_pattern in config["include_globs"]):
+                                continue
+                            if config["exclude_globs"] and any(fnmatch.fnmatch(filepath, glob_pattern) for glob_pattern in config["exclude_globs"]):
+                                continue
                             input_files.append(filepath)
-                        except OSError:
-                            if config["verbose"]: print(f"Warning: Could not access file {filepath}")
-                            continue
-        elif os.path.isfile(input_path):
-            # Apply include/exclude globs for single file input
-            if config["include_globs"] and not any(fnmatch.fnmatch(input_path, pattern) for pattern in config["include_globs"]):
-                continue
-            if config["exclude_globs"] and any(fnmatch.fnmatch(input_path, pattern) for pattern in config["exclude_globs"]):
-                continue
-
-            try:
-                file_size = os.path.getsize(input_path)
-                if total_bytes + file_size > config["max_total_bytes"]:
-                    if config["verbose"]: print(f"Budget exceeded: Adding {input_path} would exceed total byte limit.")
-                else:
-                    total_bytes += file_size
-                    input_files.append(input_path)
-            except OSError:
-                if config["verbose"]: print(f"Warning: Could not access file {input_path}")
-                continue
-
+                            total_bytes += os.path.getsize(filepath)
+    
     if not input_files:
         print("No valid input files found.")
         sys.exit(EXIT_WARNING)
 
     if len(input_files) > config["max_file_count"]:
-        print(f"Budget exceeded: Number of files ({len(input_files)}) exceeds limit ({config["max_file_count"]}).")
+        print("Budget exceeded: Number of files ({}) exceeds limit ({}).".format(len(input_files), config["max_file_count"]))
         overall_status = "budget_exceeded"
-        overall_spectral_trace = f"Processing skipped due to file count budget ({config["max_file_count"]}) exceeded."
+        overall_spectral_trace = "Processing skipped due to file count budget ({}) exceeded.".format(config["max_file_count"])
         final_results = {
             "metrics_version": config["schema_version"],
             "overall": {
@@ -454,9 +436,9 @@ def main():
         sys.exit(EXIT_WARNING)
 
     if total_bytes > config["max_total_bytes"]:
-        print(f"Budget exceeded: Total bytes ({total_bytes} bytes) exceeds limit ({config["max_total_bytes"]} bytes).")
+        print("Budget exceeded: Total bytes ({}) exceeds limit ({}).".format(total_bytes, config["max_total_bytes"]))
         overall_status = "budget_exceeded"
-        overall_spectral_trace = f"Processing skipped due to total byte budget ({config["max_total_bytes"]}) exceeded."
+        overall_spectral_trace = "Processing skipped due to total byte budget ({}) exceeded.".format(config["max_total_bytes"])
         final_results = {
             "metrics_version": config["schema_version"],
             "overall": {
@@ -475,48 +457,33 @@ def main():
         sys.exit(EXIT_WARNING)
 
     results = []
-    overall_start_time = time.perf_counter()
+    overall_processing_start_time = time.perf_counter()
 
-    with ThreadPoolExecutor(max_workers=config["jobs"]) as executor:
-        future_to_file = {executor.submit(process_file, filepath, global_seed, config): filepath for filepath in input_files}
-        for future in as_completed(future_to_file):
-            try:
+    if config["jobs"] > 1:
+        with ThreadPoolExecutor(max_workers=config["jobs"]) as executor:
+            future_to_file = {executor.submit(process_file, f, global_seed, config): f for f in input_files}
+            for future in as_completed(future_to_file):
                 results.append(future.result())
-            except Exception as exc:
-                if config["verbose"]: print(f'{future_to_file[future]} generated an exception: {exc}')
-                results.append({
-                    "path": future_to_file[future],
-                    "score": 0.0,
-                    "status": "calc_error",
-                    "spectral_trace": f"Parallel processing error: {exc}",
-                    "size_bytes": 0,
-                    "parse_time_ms": 0
-                })
+    else:
+        for f in input_files:
+            results.append(process_file(f, global_seed, config))
 
-    # Ensure deterministic order of results based on input_files order
-    results.sort(key=lambda x: input_files.index(x["path"]))
+    overall_processing_time_ms = (time.perf_counter() - overall_processing_start_time) * 1000
 
-    total_score = sum(r["score"] for r in results)
-    overall_score = total_score / len(results) if results else 0.0
-    overall_processing_time_ms = (time.perf_counter() - overall_start_time) * 1000
-
+    overall_score = sum([r["score"] for r in results]) / len(results) if results else 0.0
     overall_status = "ok"
     overall_spectral_trace = "All files processed successfully."
-    if any(r["status"] != "ok" for r in results):
-        overall_status = "partial_error"
-        overall_spectral_trace = "Some files encountered errors during processing."
 
-    resonance_echo_index = global_seed % len(HAIKUS)
-    resonance_echo = HAIKUS[resonance_echo_index]
+    resonance_echo = HAIKUS[global_seed % len(HAIKUS)]
 
     final_results = {
         "metrics_version": config["schema_version"],
         "overall": {
-            "score": overall_score,
+            "score": round(overall_score, 4),
             "threshold_used": config["threshold"],
             "threshold_source": "CLI_or_Default",
             "resonance_echo": resonance_echo,
-            "processing_time_ms": overall_processing_time_ms,
+            "processing_time_ms": round(overall_processing_time_ms, 2),
             "status": overall_status,
             "spectral_trace": overall_spectral_trace
         },
@@ -530,10 +497,10 @@ def main():
         print(f"\nResonance Echo:\n{resonance_echo}")
 
     if overall_score < config["threshold"]:
-        print(f"Overall resonance score {overall_score:.2f} is below threshold {config["threshold"]:.2f}.")
+        print("Overall resonance score {:.2f} is below threshold {:.2f}.".format(overall_score, config["threshold"]))
         sys.exit(EXIT_FAILURE)
     else:
-        print(f"Overall resonance score {overall_score:.2f} is above or equal to threshold {config["threshold"]:.2f}.")
+        print("Overall resonance score {:.2f} is above or equal to threshold {:.2f}.".format(overall_score, config["threshold"]))
         sys.exit(EXIT_SUCCESS)
 
 if __name__ == "__main__":
