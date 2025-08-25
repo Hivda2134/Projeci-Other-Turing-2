@@ -1,0 +1,33 @@
+{
+  "meta": {
+    "seed": 42,
+    "timestamp": 1756097056.1181304,
+    "version": "C6"
+  },
+  "data_summary": {
+    "num_readings": 100,
+    "num_anomalies": 60
+  },
+  "results": [
+    {
+      "iteration": 0,
+      "risk": 0.12
+    },
+    {
+      "iteration": 1,
+      "risk": 0.24
+    },
+    {
+      "iteration": 2,
+      "risk": 0.36
+    },
+    {
+      "iteration": 3,
+      "risk": 0.48
+    },
+    {
+      "iteration": 4,
+      "risk": 0.6
+    }
+  ]
+}

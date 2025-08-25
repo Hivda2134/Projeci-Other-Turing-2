@@ -1,0 +1,3 @@
+Simulation Summary (Seed: 42):
+  Average Risk Score: 0.6000
+  Masked Readings (first 5): [0.6394267984578837, 0, 0, 0, 0.7364712141640124]
