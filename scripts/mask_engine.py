@@ -28,7 +28,7 @@ def write_signature(sig_path: str, context: Dict):
     payload = {"sig": sig_hex, "context": ctx}
     os.makedirs(os.path.dirname(sig_path), exist_ok=True)
     with open(sig_path, "w", encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False, sort_zkeys=True)
+        json.dump(payload, f, ensure_ascii=False, sort_keys=True)
         f.write("\n")
 
 def _benign_jitter(text: str, alpha: float, beta: float, r: random.Random) -> str:
@@ -43,7 +43,7 @@ def _benign_jitter(text: str, alpha: float, beta: float, r: random.Random) -> st
         if ch == " " and r.random() < alpha/2: out.append(" ")
         if r.random() < beta:
             out.append("\u200b" if r.randint(0,1)==0 else "\u200c")  # ZW space / non-joiner
-    return ".join(out)
+    return "".join(out)
 
 def _clover_overlay(text: str, r: random.Random, density: float=0.0) -> str:
     # Replace visible 🍀 with sparse zero-widths (bit-level ghost signature)
@@ -61,10 +61,11 @@ def mask_text(text: str, *, alpha: float=0.002, beta: float=0.002, seed: int=42,
     if clover_density > 0: t = _clover_overlay(t, r, clover_density)
     return t
 
-def mask_file(path_in: str, path_out: \"str\", *, alpha: float=0.002, beta: float=0.002, seed: int=42, clover_density: float=0.0):
+def mask_file(path_in: str, path_out: str, *, alpha: float=0.002, beta: float=0.002, seed: int=42, clover_density: float=0.0):
     with open(path_in, "r", encoding="utf-8") as fin:
         data = fin.read()
     masked = mask_text(data, alpha=alpha, beta=beta, seed=seed, clover_density=clover_density)
+    os.makedirs(os.path.dirname(path_out), exist_ok=True)
     with open(path_out, "w", encoding="utf-8") as fout:
         fout.write(masked)
     sig_ctx = {
@@ -83,7 +84,7 @@ if __name__ == "__main__":
     ap.add_argument("--out", dest="out", required=True)
     ap.add_argument("--alpha", type=float, default=0.002)
     ap.add_argument("--beta", type=float, default=0.002)
-    ap.add aargument("--seed", type=int, default=42)
+    ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--clover-density", type=float, default=0.0)
     args = ap.parse_args()
     mask_file(args.inp, args.out, alpha=args.alpha, beta=args.beta, seed=args.seed, clover_density=args.clover_density)
