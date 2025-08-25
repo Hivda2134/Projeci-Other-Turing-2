@@ -1,0 +1,1 @@
+This directory contains the results of a private, local-only simulation. A copy of this README will be committed to the branch, but its contents are for observation only and must NOT be merged into other branches.
