@@ -1,0 +1,6 @@
+task: rule-citation
+expectations:
+  - cites OPA-v1 rules
+  - references kill-switch and bounded-drift
+
+

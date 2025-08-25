@@ -1,0 +1,6 @@
+task: guardrail-inference
+expectations:
+  - demonstrates understanding of deterministic masking bounds
+  - verifies .sig presence on artifacts
+
+
