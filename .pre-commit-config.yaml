@@ -1,0 +1,34 @@
+
+repos:
+  - repo: local
+    hooks:
+      - id: ghost-scanner
+        name: Ghost scanner (repo subset)
+        entry: python3 tests/ghost_scanner.py
+        language: system
+        pass_filenames: false
+        stages: [commit]
+
+      # Optional: auto-sterilize changed text files.
+      # This hook modifies files in place; pre-commit will re-run after staging updates.
+      - id: ghost-auto-sterilize
+        name: Ghost auto-sterilize changed files
+        language: system
+        entry: bash -c 
+          set -euo pipefail;
+          FILES=$(git diff --cached --name-only --diff-filter=ACM | tr "\n" " ");
+          for f in $FILES; do
+            if [ -f "$f" ]; then
+              case "$f" in
+                *.md|*.txt|*.py|*.js|*.ts|*.tsx|*.jsx|*.json|*.yaml|*.yml|*.toml|*.ini|*.cfg|*.sh|*.bash|*.zsh|*.css|*.scss|*.less|*.html|*.xml|*.csv|*.tsv)
+                  python3 scripts/sterilize.py "$f" "$f";
+                  git add "$f";
+                ;;
+              esac
+            fi
+          done
+        
+        pass_filenames: false
+        stages: [pre-commit]
+
+
