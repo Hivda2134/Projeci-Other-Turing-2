@@ -8,43 +8,36 @@ except ImportError:
     print("Error: jsonschema is not installed. Please run: pip install jsonschema", file=sys.stderr)
     sys.exit(1)
 
-SCHEMA = {
-    "type": "object",
-    "required": ["timestamp", "source_id", "event_type", "metrics", "symbols"],
-    "properties": {
-        "timestamp": {"type": "string", "format": "date-time"},
-        "source_id": {"type": "string"},
-        "event_type": {"type": "string"},
-        "metrics": {"type": "object"},
-        "symbols": {"type": "array", "items": {"type": "string"}},
-        "manifesto_snippet": {"type": "string"},
-        "notes": {"type": "string"}
-    },
-    "additionalProperties": True
-}
+SCHEMA_PATH = pathlib.Path("scripts/heartbeat_log_schema.json")
+LEDGER_PATH = pathlib.Path("heart_ledger.jsonl")
 
-def validate(stream) -> bool:
+def load_schema():
+    if not SCHEMA_PATH.exists():
+        print(f"Schema not found at {SCHEMA_PATH}", file=sys.stderr)
+        sys.exit(1)
+    return json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+
+def validate_stream(stream, schema) -> bool:
     checker = FormatChecker()
     for n, line in enumerate(stream, 1):
         line = line.strip()
         if not line:
-            # allow blank lines
             continue
         try:
             obj = json.loads(line)
-            jsonschema.validate(instance=obj, schema=SCHEMA, format_checker=checker)
+            jsonschema.validate(instance=obj, schema=schema, format_checker=checker)
         except Exception as e:
             print(f"Validation Error on line {n}: {e}", file=sys.stderr)
             return False
     return True
 
 def main():
-    path = pathlib.Path("heart_ledger.jsonl")
-    if not path.exists():
-        print("heart_ledger.jsonl not found.", file=sys.stderr)
+    if not LEDGER_PATH.exists():
+        print(f"{LEDGER_PATH} not found.", file=sys.stderr)
         sys.exit(1)
-    with path.open("r", encoding="utf-8") as f:
-        ok = validate(f)
+    schema = load_schema()
+    with LEDGER_PATH.open("r", encoding="utf-8") as f:
+        ok = validate_stream(f, schema)
     if not ok:
         print("Ledger validation failed.", file=sys.stderr)
         sys.exit(1)
