@@ -1,0 +1,48 @@
+
+name: Heart Protocol Check
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Every Monday at 09:00 UTC
+  workflow_dispatch:
+
+jobs:
+  heart-summary:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write   # needed only if you enable comment step
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install dependencies
+        run: pip install jsonschema
+      - name: Validate Ledger
+        run: python3 scripts/validate_heart.py
+      - name: Generate Weekly Summary
+        id: summary
+        run: |
+          python3 scripts/aggregate_heart.py > summary.json
+          echo "summary_path=ci_artifacts/heart_weekly_summary.json" >> $GITHUB_OUTPUT
+      - name: Upload summary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: heart-weekly-summary
+          path: ci_artifacts/heart_weekly_summary.json
+      # Optional: post a comment to a pinned issue (requires issues: write)
+      # - name: Post Weekly Summary to Issue #1
+      #   uses: actions/github-script@v7
+      #   with:
+      #     script: |
+      #       const fs = require('fs');
+      #       const body = fs.readFileSync('ci_artifacts/heart_weekly_summary.json', 'utf8');
+      #       await github.rest.issues.createComment({
+      #         owner: context.repo.owner,
+      #         repo: context.repo.repo,
+      #         issue_number: 1,
+      #         body: `📊 Heart Protocol Weekly Report\n\n\`\`\`json\n${body}\n\`\`\``
+      #       });
+
+
