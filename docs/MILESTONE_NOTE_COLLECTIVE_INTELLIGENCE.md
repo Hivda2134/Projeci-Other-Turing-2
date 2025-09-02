@@ -19,8 +19,8 @@ Why it matters
 - Minimal metrics, strong ethics: we track collective trends, not individuals.
 
 Next 2 sprints (low effort → high impact)
-1) C9.2 — Schema versioning and changelog; add `$id` and `schema_version`.
-2) C9.3 — Anonymization module (opt-in, salted HMAC) and a CLI ingest helper.
+1) C9.2 — Schema versioning and changelog; add `$id` and `schema_version` (Completed).
+2) C9.3 — Anonymization module (opt-in, salted HMAC) and a CLI ingest helper (In Progress).
 
 A note on ethos
 We act as a collective intelligence: human intention (eyes and hands) + model reasoning (speed and structure) + automation (CI). Evidence first, then story—never the other way around.

@@ -24,7 +24,7 @@ jobs:
       - name: Validate Ledger
         run: python3 scripts/validate_heart.py
       - name: Run unit tests
-        run: pytest -q
+        run: pytest -q tests/test_validate_heart.py tests/test_aggregate_heart.py tests/test_anonymize.py tests/test_ingest_heartbeat.py
       - name: Generate Weekly Summary
         id: summary
         run: |
