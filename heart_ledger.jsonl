@@ -1,0 +1,5 @@
+{"timestamp":"2025-09-03T09:00:00Z","source_id":"test-user-alpha","event_type":"synthetic-event","metrics":{"pulse":72,"focus":0.81},"symbols":["SYNTHETIC"],"notes":"baseline sample"}
+{"timestamp":"2025-09-03T09:05:00Z","source_id":"test-user-beta","event_type":"check-in","metrics":{"pulse":68,"focus":0.76},"symbols":["CHECKIN"],"notes":""}
+{"timestamp":"2025-09-03T09:10:00Z","source_id":"test-user-alpha","event_type":"reflection","metrics":{"pulse":70,"focus":0.88},"symbols":["REFLECTION"],"tags":["morning","calm"]}
+{"timestamp":"2025-09-03T09:15:00Z","source_id":"test-user-gamma","event_type":"synthetic-event","metrics":{"pulse":79,"focus":0.69},"symbols":["SYNTHETIC"]}
+{"timestamp":"2025-09-03T09:20:00Z","source_id":"test-user-beta","event_type":"milestone","metrics":{"pulse":73,"focus":0.92},"symbols":["MILESTONE"],"notes":"passed CI; artifact uploaded"}
