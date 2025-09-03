@@ -1,94 +1,96 @@
 # Anonymization Module (C9.3)
 
-## Overview
-This document details the implementation and usage of the anonymization module within the Heart Protocol v2. The module provides an opt-in mechanism to protect sensitive `source_id` data using salted HMAC (Hash-based Message Authentication Code).
+**Goal**  
+Provide a minimal, deterministic, and privacy-preserving way to replace `source_id` with an anonymous identifier using a salted HMAC-SHA256. This enables analysis on aggregated data without exposing sensitive identifiers.
 
-## 1. `scripts/anonymize.py`
+---
 
-### Purpose
-This script contains the core logic for anonymizing data fields using salted HMAC. It ensures that sensitive identifiers, such as `source_id`, are transformed into irreversible, non-traceable hashes while maintaining data integrity for analytical purposes.
+## Components
 
-### Function: `anonymize_data(data, salt, fields_to_anonymize)`
-- `data` (dict): The dictionary containing the heartbeat log entry.
-- `salt` (str): A unique, securely managed string used as a salt for the HMAC calculation. This salt is crucial for preventing rainbow table attacks and ensuring the uniqueness of hashes across different contexts or periods.
-- `fields_to_anonymize` (list): A list of string keys representing the fields within the `data` dictionary that need to be anonymized. Currently, the primary field targeted for anonymization is `source_id`.
+- `scripts/anonymize_heart_event.py`  
+  CLI + library function. Reads **one** JSON event from `stdin`, returns JSON with `anonymous_id` (and without `source_id`).  
+  Requires env var `HEART_PROTOCOL_SALT`.
 
-### How it Works
-For each specified field in `fields_to_anonymize`:
-1. The original value of the field is converted to a string and then encoded into bytes (UTF-8).
-2. A salted HMAC-SHA256 hash is computed using the provided `salt` and the encoded original value.
-3. The original value in the `data` dictionary is replaced with its hexadecimal HMAC hash representation.
+- `scripts/run_anonymization.sh`  
+  Batch helper. Reads `heart_ledger.jsonl` line-by-line and writes `heart_ledger_anonymized.jsonl`.  
+  If `HEART_PROTOCOL_SALT` is missing, it generates a **temporary** salt for the run (for local testing only).
 
-### Example Usage (within other scripts)
-```python
-import hmac
-import hashlib
+- `tests/test_anonymize_heart_event.py`  
+  Unit tests for determinism, salt handling, and CLI behavior.
 
-from scripts.anonymize import anonymize_data
+- `scripts/validate_anonymizer.py`  
+  Smoke test for CI: runs the CLI with an ephemeral salt and validates output shape.
 
-# Example heartbeat log entry
-heartbeat_entry = {
-    "timestamp": "2025-01-01T12:00:00Z",
-    "source_id": "unique_user_identifier_123",
-    "event_type": "data_submission",
-    "metrics": {"value": 100},
-    "symbols": ["A", "B"]
-}
+---
 
-# A securely managed salt (e.g., from environment variables or a configuration system)
-secure_salt = os.environ.get("ANONYMIZATION_SALT") # Example: retrieve from environment
+## Security & Privacy Model (MVP)
 
-if secure_salt:
-    anonymized_entry = anonymize_data(heartbeat_entry, secure_salt, ["source_id"])
-    print("Anonymized Entry:", anonymized_entry)
-else:
-    print("Warning: ANONYMIZATION_SALT not set. Data will not be anonymized.")
+- **Deterministic mapping**: same `(source_id, salt)` → same `anonymous_id`.  
+- **Salt secrecy**: the salt must be stored securely (e.g., as a secret in CI or a local `.env`).  
+- **No reversible mapping**: without the salt, recovering `source_id` from `anonymous_id` is infeasible.
+- **Scope**: only `source_id` is transformed in this MVP. Other fields remain untouched.
 
-```
+> ⚠️ Never commit the real salt to the repository. Treat it like a password.
 
-## 2. `scripts/ingest_heartbeat.py`
+---
 
-### Purpose
-This command-line interface (CLI) tool facilitates the ingestion of heartbeat log entries into the `heart_ledger.jsonl` file. It provides an opt-in mechanism for anonymizing `source_id` data during the ingestion process.
+## CLI Usage
 
-### Usage
+### One event (stdin → stdout)
 ```bash
-python3 scripts/ingest_heartbeat.py [--anonymize --salt <YOUR_SALT>] [--input_file <PATH_TO_FILE>]
-```
+export HEART_PROTOCOL_SALT="your-secret-salt"
+echo '{"source_id":"user-123","value":1}' | python3 scripts/anonymize_heart_event.py
 
-### Arguments
-- `--anonymize`: (Optional flag) If present, enables the anonymization of the `source_id` field for each ingested log entry. When this flag is used, the `--salt` argument becomes mandatory.
-- `--salt <YOUR_SALT>`: (Required if `--anonymize` is used) Specifies the salt string to be used for HMAC calculation during anonymization. This salt should be kept confidential and consistent for a given anonymization context.
-- `--input_file <PATH_TO_FILE>`: (Optional) Specifies the path to a JSONL (JSON Lines) file containing heartbeat log entries. If this argument is omitted, the script will read log entries from standard input (stdin).
+Output (shape):
 
-### How it Works
-1. **Input Reading**: The script reads heartbeat log entries either from a specified input file or from stdin, expecting one JSON object per line.
-2. **Anonymization (Opt-in)**: If the `--anonymize` flag is provided along with a `--salt`:
-   - For each valid JSON log entry, the `anonymize_data` function from `scripts/anonymize.py` is called to hash the `source_id` field.
-   - If `source_id` is `None` or not present, it is skipped.
-3. **Output Writing**: The processed (anonymized or original) log entries are appended to the `heart_ledger.jsonl` file.
+{"value":1,"anonymous_id":"<64-hex-hmac>"}
 
-### Error Handling
-- If `--anonymize` is used without `--salt`, an error message is printed, and the script exits.
-- Invalid JSON lines in the input are skipped, and an error message is printed to stderr.
-- If the specified `--input_file` does not exist, an error message is printed, and the script exits.
+Batch mode (JSON Lines ledger)
 
-## 3. Security Considerations
-- **Salt Management**: The security of the anonymization process heavily relies on the confidentiality and uniqueness of the salt. It is critical to:
-    - Use a strong, randomly generated salt.
-    - Never hardcode the salt in the codebase.
-    - Manage the salt securely (e.g., via environment variables, secure configuration management systems, or a dedicated secrets management service).
-    - Rotate salts periodically if the threat model requires it.
-- **Irreversibility**: HMAC is a one-way cryptographic hash function. Once `source_id` values are anonymized, they cannot be reversed to their original form. This ensures privacy.
-- **Collision Resistance**: While HMAC is designed to be collision-resistant, it's important to understand that different original values *could* theoretically produce the same hash, especially with weak salts or very small input spaces. However, for typical `source_id` values and strong salts, this risk is negligible.
+# Uses heart_ledger.jsonl by default; writes heart_ledger_anonymized.jsonl
+HEART_PROTOCOL_SALT="your-secret-salt" ./scripts/run_anonymization.sh
 
-## 4. Integration and Validation
-- **Schema Compatibility**: The anonymized `source_id` (a hexadecimal string) remains compatible with the `heartbeat_log_schema.json`, which expects `source_id` to be a string.
-- **`validate_heart.py`**: This script will continue to validate the schema of both original and anonymized heartbeat entries without modification.
-- **`aggregate_heart.py`**: The aggregation script will process the hashed `source_id` values as distinct identifiers, allowing for collective trend analysis without exposing individual `source_id`s.
+# Custom paths
+HEART_PROTOCOL_SALT="your-secret-salt" ./scripts/run_anonymization.sh data/ledger.jsonl out/anonymized.jsonl
 
-## 5. Future Enhancements
-- Consider adding support for anonymizing other fields based on future privacy requirements.
-- Implement a salt rotation mechanism within the system.
-- Explore integration with a dedicated secrets management system for salt retrieval.
+If HEART_PROTOCOL_SALT is not set, the wrapper generates a temporary salt and prints it to stderr (for local tests only).
 
+⸻
+
+Testing
+
+Unit tests
+
+python -m pip install -U pip pytest
+pytest -q
+
+Smoke test
+
+python3 scripts/validate_anonymizer.py
+
+Manual sanity check
+
+export HEART_PROTOCOL_SALT="same-salt"
+echo '{"source_id":"A"}' | python3 scripts/anonymize_heart_event.py > /tmp/a.json
+echo '{"source_id":"A"}' | python3 scripts/anonymize_heart_event.py > /tmp/b.json
+diff /tmp/a.json /tmp/b.json  # should be identical
+
+⸻
+
+Operational Guidance
+	•	Where to run: Prefer running anonymization before sharing logs outside the secure workspace.
+	•	Rotation: If you rotate the salt, you break cross-time linkage (privacy ↑, continuity ↓). Choose intentionally.
+	•	Future extensions:
+	•	Support Base64 output (shorter tokens).
+	•	Hash other quasi-identifiers (configurable field list).
+	•	Per-tenant/per-environment salt derivation.
+
+⸻
+
+Troubleshooting
+	•	ERROR: environment variable HEART_PROTOCOL_SALT is not set.
+→ Set export HEART_PROTOCOL_SALT="..." or use the wrapper which can generate a temporary salt.
+	•	ledger file 'X' not found
+→ Pass correct path: ./scripts/run_anonymization.sh path/to/ledger.jsonl out.jsonl.
+	•	Non-UTF8 or malformed JSON lines
+→ Clean/validate the ledger before running batch anonymization.

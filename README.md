@@ -50,3 +50,9 @@ PYTHONPATH=. pytest
 ```
 
 
+
+Anonymization Module (C9.3)
+	•	Docs: docs/ANONYMIZATION_MODULE.md
+	•	CLI: scripts/anonymize_heart_event.py (requires HEART_PROTOCOL_SALT)
+	•	Batch: scripts/run_anonymization.sh → heart_ledger_anonymized.jsonl
+	•	Tests: pytest -q, plus scripts/validate_anonymizer.py smoke test
