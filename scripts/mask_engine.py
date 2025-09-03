@@ -1,6 +1,5 @@
 
-#!/usr/bin/python3
-
+#!/usr/bin/env python3
 import hashlib, json, os, random
 from datetime import datetime
 from typing import Dict

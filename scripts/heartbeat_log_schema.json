@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/schemas/heartbeat_log_v1.json",
+  "schema_version": "1.0.0",
+  "title": "Heart Ledger Event",
+  "type": "object",
+  "required": ["timestamp", "source_id", "event_type", "metrics", "symbols"],
+  "properties": {
+    "timestamp": { "type": "string", "format": "date-time" },
+    "source_id": { "type": "string", "minLength": 1 },
+    "event_type": { "type": "string", "minLength": 1 },
+    "metrics": { "type": "object" },
+    "symbols": { "type": "array", "items": { "type": "string" } },
+    "manifesto_snippet": { "type": "string" },
+    "notes": { "type": "string" }
+  },
+  "additionalProperties": true
+}
+
+

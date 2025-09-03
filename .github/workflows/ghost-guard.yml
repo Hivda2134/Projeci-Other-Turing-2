@@ -1,0 +1,27 @@
+name: Ghost Guard
+on:
+  push:
+  pull_request:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Verify Python
+        run: python -c "import sys; print(sys.version)"
+      - name: Ghost scan (repo-wide)
+        run: python3 tests/ghost_scanner.py
+      - name: Upload ghost report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ghost-report
+          path: ci_artifacts/ghost_report.json
+
