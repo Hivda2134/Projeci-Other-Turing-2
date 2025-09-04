@@ -4,17 +4,46 @@
   "schema_version": "1.0.0",
   "title": "Heart Ledger Event",
   "type": "object",
-  "required": ["timestamp", "source_id", "event_type", "metrics", "symbols"],
+  "required": [
+    "timestamp",
+    "source_id",
+    "event_type",
+    "metrics",
+    "symbols"
+  ],
   "properties": {
-    "timestamp": { "type": "string", "format": "date-time" },
-    "source_id": { "type": "string", "minLength": 1 },
-    "event_type": { "type": "string", "minLength": 1 },
-    "metrics": { "type": "object" },
-    "symbols": { "type": "array", "items": { "type": "string" } },
-    "manifesto_snippet": { "type": "string" },
-    "notes": { "type": "string" }
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "event_type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "metrics": {
+      "type": "object"
+    },
+    "symbols": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "manifesto_snippet": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "piv": {
+      "type": "object",
+      "description": "Optional persistent identity vector (PIV) object",
+      "additionalProperties": true
+    }
   },
   "additionalProperties": true
 }
-
-
