@@ -1,0 +1,9 @@
+version: 1
+safe_actions:
+  - id: ci_check
+    trigger: "schedule.weekly OR manual"
+    effect: "run witness snapshot and publish artifact"
+    requires_human_approval: false
+guarded_actions: []
+forbidden_actions:
+  - "exfiltrate_private_data"

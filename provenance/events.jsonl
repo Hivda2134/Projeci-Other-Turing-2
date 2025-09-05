@@ -1,0 +1,1 @@
+{"ts":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'","actor":"human","action":"init_witness","inputs":[],"outputs":["memory/*"],"tools":["git"],"human_reviewed":true}
