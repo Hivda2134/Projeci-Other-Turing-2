@@ -10,7 +10,7 @@ outdir.mkdir(exist_ok=True)
 def sha256(p: pathlib.Path):
     h = hashlib.sha256()
     with p.open("rb") as f:
-        for chunk in iter(lambda: f.read(65536), b""):
+        for chunk in iter(lambda: f.read(65536), b''):
             h.update(chunk)
     return h.hexdigest()
 
