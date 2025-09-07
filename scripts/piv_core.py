@@ -41,3 +41,7 @@ if __name__ == "__main__":
         print(json.dumps(calculate_piv(data["events"]), indent=2))
     else:
         print("Usage: echo '{\"events\": [{...}, ...]}' | python3 scripts/piv_core.py")
+
+
+# This is a test comment to trigger CI.
+
