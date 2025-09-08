@@ -64,7 +64,7 @@ JL
           test $(wc -l < ci_artifacts/sample_ledger_anonymized.jsonl) -eq 3
           # Ensure no 'source_id' remains and 'anonymous_id' exists on each line
           ! grep -q '"source_id"' ci_artifacts/sample_ledger_anonymized.jsonl
-          awk 'NR==1{print}{next}' ci_artifacts/sample_ledger_anonymized.jsonl | while read -r line; do
+          awk 'NR==1{print}{next}' ci_artifacts/sample_ledger_anonymized.jsonl | while IFS= read -r line; do
             echo "$line" | jq -e 'has("anonymous_id")' > /dev/null
           done
           # Determinism check: lines 1 and 3 had the same source_id ("alpha"); hashes must match
