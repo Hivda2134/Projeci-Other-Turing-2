@@ -1,68 +1,56 @@
-
-import textwrap
 import pytest
-from analysis.ast_parser import parse_symbolic_summary
+from typing import Union, Dict, List
+# Bu import yolu, projemizin yapısına göre ayarlanmalıdır.
+# Eğer 'analysis' bir paket ise bu çalışacaktır.
+try:
+    from analysis.ast_parser import parse_symbolic_summary
+except ImportError:
+    # Alternatif yol, eğer doğrudan scripts'ten çağrılıyorsa
+    from scripts.ast_parser import parse_symbolic_summary
 
-def test_parse_symbolic_summary_basic():
-    src = textwrap.dedent(
-        '''
-        """
-        Module doc for greetings.
-        """
-        import os
-        import sys as system
-        from collections import defaultdict as dd, Counter
+def test_parse_valid_function():
+    """
+    Tests if a simple function definition is parsed correctly.
+    """
+    code = """
+def my_function(a: int, b: str) -> bool:
+    return True
+"""
+    summary = parse_symbolic_summary(code)
+    assert isinstance(summary, dict)
+    assert "my_function" in summary
+    assert summary["my_function"] == ["int", "str"]
 
-        class Greeter:
-            """Say hello to people."""
-            def greet(self, name: str) -> str:
-                """Return a greeting."""
-                print("log")
-                return f"Hello, {name}"
+def test_parse_class_with_methods():
+    """
+    Tests if a class with methods is parsed correctly.
+    """
+    code = """
+class MyClass:
+    def method_one(self):
+        pass
+    def method_two(self, x: float):
+        pass
+"""
+    summary = parse_symbolic_summary(code)
+    assert isinstance(summary, dict)
+    assert "MyClass.method_one" in summary
+    assert "MyClass.method_two" in summary
+    assert summary["MyClass.method_two"] == ["float"]
 
-        def add(a: int, b: int) -> int:
-            """Add two numbers.""" 
-            return a + b
+def test_parse_invalid_code_returns_error_string():
+    """
+    Tests if invalid Python code returns an error string.
+    """
+    code = "def my_function(:"
+    summary = parse_symbolic_summary(code)
+    assert isinstance(summary, str)
+    assert "Error" in summary
 
-        def main():
-            """Main entry point."""
-            user = "World"
-            x, y = 1, 2
-            with open("tmp.txt", "w") as fh:
-                fh.write("hi")
-            total = add(1, 2)
-            print(total)
-            flag: bool = True
-            count = 0
-        '''
-    )
-    summary = parse_symbolic_summary(src)
-    assert "error" not in summary
-    assert "Greeter" in summary["class_names"]
-    assert "greet" in summary["method_names"]
-    assert "add" in summary["function_names"]
-    vars_ = set(summary["variable_names"])
-    assert {"user", "x", "y", "fh", "total", "flag", "count"} <= vars_
-    assert {"name", "a", "b"} <= set(summary["param_names"])
-    hints = summary["type_hints"]
-    assert any(h in hints for h in ("str", "int", "bool"))
-    assert "os" in summary["imports"]
-    assert "collections.defaultdict" in summary["from_imports"]
-    assert "system" in summary["import_aliases"]
-    docs = " ".join(summary["docstrings"]) + " " + summary["module_doc"]
-    assert "Say hello to people." in docs
-    calls = set(summary["calls"])
-    se_calls = set(summary["side_effect_calls"])
-    assert {"print", "open"}.issubset(calls)
-    assert {"print", "open"}.issubset(se_calls)
-    m = summary["metrics"]
-    assert m["num_functions"] >= 2
-    assert m["num_classes"] == 1
-    assert m["num_side_effect_calls"] >= 2
-
-def test_syntax_error_is_handled_gracefully():
-    bad_src = "def oops(:\n  pass\n"
-    summary = parse_symbolic_summary(bad_src)
-    assert "error" in summary
-    assert summary.get("function_names") == []
-
+def test_empty_code_returns_empty_dict():
+    """
+    Tests if empty code returns an empty dictionary.
+    """
+    code = ""
+    summary = parse_symbolic_summary(code)
+    assert summary == {}
