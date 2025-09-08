@@ -2,20 +2,36 @@ name: Ghost Guard
 
 on:
   push:
-    branches: ["**"]
+    branches: [main, dev, sprint/*]
   pull_request:
 
 jobs:
   ghost-scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install .[dev] jsonschema
-      - name: Run ghost scanner
+          pip install pytest jsonschema
+
+      - name: Ghost Scanner
         run: python tests/ghost_scanner.py
+
+      - name: Salt presence check
+        run: |
+          if [[ -z "${{ secrets.HEART_PROTOCOL_SALT }}" ]]; then
+            echo "::error::HEART_PROTOCOL_SALT secret missing"; exit 2
+          fi
+
+      - name: Run unit tests
+        run: pytest -q
+        env:
+          HEART_PROTOCOL_SALT: ${{ secrets.HEART_PROTOCOL_SALT }}
