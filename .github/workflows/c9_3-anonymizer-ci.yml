@@ -46,10 +46,10 @@ jobs:
         run: |
           mkdir -p ci_artifacts
           cat > ci_artifacts/sample_ledger.jsonl <<-"EOF"
-            {"source_id":"alpha","value":1}
-            {"source_id":"beta","value":2}
-            {"source_id":"alpha","value":3}
-            EOF
+          {"source_id":"alpha","value":1}
+          {"source_id":"beta","value":2}
+          {"source_id":"alpha","value":3}
+          EOF
 
       - name: Run batch anonymization with ephemeral salt
         env:
