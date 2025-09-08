@@ -1,4 +1,4 @@
-name: Ghost Guard
+name: Main CI
 
 on:
   push:
