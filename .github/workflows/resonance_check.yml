@@ -33,7 +33,7 @@ jobs:
         pip install -e .
 
     - name: Run pytest
-      run: python -m pytest
+      run: python -m pytest tests
 
     - name: Validate Schema
       run: PYTHONPATH=. python -m metrics.resonance_metric --validate-schema-only
