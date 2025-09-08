@@ -15,7 +15,8 @@ import json
 import os
 import sys
 from pathlib import Path
-from scripts.piv_core import calculate_piv
+from .piv_core import calculate_piv
+
 
 LEDGER = os.environ.get("HEART_LEDGER_PATH", "heart_ledger.jsonl")
 
