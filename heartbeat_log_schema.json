@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://uss-yanki.org/schemas/heartbeat_log_schema.json",
+  "title": "Heartbeat Log Entry",
+  "description": "Single heartbeat event logged by Λmutual nodes (moved to root for CI compatibility)",
+  "type": "object",
+  "required": ["timestamp", "source_id", "event_type", "metrics"],
+  "properties": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC RFC3339 timestamp of the heartbeat"
+    },
+    "source_id": {
+      "type": "string",
+      "description": "Anonymized node identifier (hmac256:<hash>)"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": ["heartbeat", "resonance", "witness", "error"]
+    },
+    "metrics": {
+      "type": "object",
+      "required": ["delta"],
+      "properties": {
+        "delta": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Resonance delta score (0 → perfect, 1 → max drift)"
+        },
+        "f1": { "type": "number" },
+        "f2": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "symbols": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Optional symbolic tags (e.g., ['green','stable'])"
+    },
+    "piv": {
+      "$ref": "#/$defs/piv"
+    }
+  },
+  "$defs": {
+    "piv": {
+      "type": "object",
+      "description": "Persistent Identity Vector (witness chain linkage)",
+      "required": ["parent", "hash", "version", "ts"],
+      "properties": {
+        "parent": { "type": ["string", "null"], "description": "Parent event hash" },
+        "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "version": { "type": "string", "const": "c12.2-v1" },
+        "ts": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
