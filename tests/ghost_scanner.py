@@ -7,7 +7,8 @@ import sys, os, json
 
 def check_files():
     required = [
-        "setup.py",
+"pyproject.toml",
+        
         "heartbeat_log_schema.json",
         "scripts/piv_core.py",
     ]
