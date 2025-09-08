@@ -25,6 +25,7 @@ jobs:
       with:
         python-version: '3.x'
 
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
@@ -32,9 +33,7 @@ jobs:
         pip install -e .
 
     - name: Run pytest
-      run: |
-        python -m pytest
-      working-directory: .
+      run: python -m pytest
 
     - name: Validate Schema
       run: PYTHONPATH=. python -m metrics.resonance_metric --validate-schema-only
