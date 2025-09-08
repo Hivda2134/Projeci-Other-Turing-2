@@ -2,7 +2,7 @@ import json
 import os
 import pytest
 from typing import Union
-from ..scripts.calibrate_resonance import calibrate_resonance
+from scripts.calibrate_resonance import calibrate_resonance
 
 
 def test_calibrate_resonance(tmp_path):
