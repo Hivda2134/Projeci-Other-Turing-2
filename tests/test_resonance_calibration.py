@@ -1,7 +1,9 @@
 import json
 import os
 import pytest
-from scripts.calibrate_resonance import calibrate_resonance
+from typing import Union
+from ..scripts.calibrate_resonance import calibrate_resonance
+
 
 def test_calibrate_resonance(tmp_path):
     # Create a dummy samples directory and files for testing
