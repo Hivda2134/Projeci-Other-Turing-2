@@ -23,7 +23,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.x'
+        python-version: '3.9'
 
 
     - name: Install dependencies
@@ -33,7 +33,7 @@ jobs:
         pip install -e .
 
     - name: Run pytest
-      run: python -m pytest tests
+      run: PYTHONPATH=. python -m pytest tests
 
     - name: Validate Schema
       run: PYTHONPATH=. python -m metrics.resonance_metric --validate-schema-only

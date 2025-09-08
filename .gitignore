@@ -209,3 +209,7 @@ ci_artifacts_private/
 *.sig
 .secrets
 ci_artifacts/
+
+
+.rescache/
+

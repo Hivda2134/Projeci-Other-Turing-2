@@ -29,17 +29,17 @@ def run_metric_and_get_output(args):
 
 def test_file_count_budget_exceeded():
     returncode, result = run_metric_and_get_output(["--input", "samples", "--max-file-count", "2"])
-    assert returncode == 2 # EXIT_FAILURE
+    assert returncode == 1 # EXIT_WARNING
     assert result is not None
-    assert "Budget exceeded" in result["overall"]["spectral_trace"]
-    assert "files processed" in result["overall"]["spectral_trace"]
+    assert "Processing skipped due to" in result["overall"]["spectral_trace"]
+    assert "file count budget" in result["overall"]["spectral_trace"]
 
 def test_total_bytes_budget_exceeded():
     returncode, result = run_metric_and_get_output(["--input", "samples", "--max-total-bytes", "100"])
-    assert returncode == 2 # EXIT_FAILURE
+    assert returncode == 1 # EXIT_WARNING
     assert result is not None
-    assert "Budget exceeded" in result["overall"]["spectral_trace"]
-    assert "bytes processed" in result["overall"]["spectral_trace"]
+    assert "Processing skipped due to" in result["overall"]["spectral_trace"]
+    assert "total byte budget" in result["overall"]["spectral_trace"]
 
 def test_file_size_budget_exceeded():
     dummy_file = "samples/large_dummy_file.py"

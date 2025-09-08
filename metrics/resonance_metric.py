@@ -1,4 +1,5 @@
 
+
 import json
 import math
 import os
@@ -236,7 +237,7 @@ def process_file(filepath: str, global_seed: int, config: Dict) -> Dict:
 
         with open(filepath, "r") as f:
             input_text = f.read()
-        
+
         # Seed for file-specific determinism
         file_seed = hash(filepath) ^ global_seed
         random.seed(file_seed)
@@ -268,23 +269,39 @@ def process_file(filepath: str, global_seed: int, config: Dict) -> Dict:
         status = "syntax_error"
         spectral_trace = f"The syntax fractured, a whisper lost in translation: {e}"
         score = 0.0
+        return {
+            "path": filepath,
+            "score": score,
+            "status": status,
+            "spectral_trace": spectral_trace,
+            "size_bytes": file_size,
+            "parse_time_ms": (time.perf_counter() - start_time) * 1000
+        }
     except IOError as e:
         status = "io_error"
         spectral_trace = f"The file remained silent, its secrets unshared: {e}"
         score = 0.0
+        return {
+            "path": filepath,
+            "score": score,
+            "status": status,
+            "spectral_trace": spectral_trace,
+            "size_bytes": file_size,
+            "parse_time_ms": (time.perf_counter() - start_time) * 1000
+        }
     except Exception as e:
         status = "calc_error"
         spectral_trace = f"Numbers danced wildly, defying logic\"s embrace: {e}"
         score = 0.0
+        return {
+            "path": filepath,
+            "score": score,
+            "status": status,
+            "spectral_trace": spectral_trace,
+            "size_bytes": file_size,
+            "parse_time_ms": (time.perf_counter() - start_time) * 1000
+        }
 
-    return {
-        "path": filepath,
-        "score": score,
-        "status": status,
-        "spectral_trace": spectral_trace,
-        "size_bytes": file_size,
-        "parse_time_ms": (time.perf_counter() - start_time) * 1000
-    }
 
 def _manage_cache_size(cache_dir: str, max_size_mb: int):
     total_size = 0
@@ -505,5 +522,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
