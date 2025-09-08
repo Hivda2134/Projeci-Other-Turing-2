@@ -31,10 +31,10 @@ jobs:
         pip install pytest jsonschema
         pip install -e .
 
-      - name: Run pytest
-        run: |
-          python -m pytest
-        working-directory: .
+    - name: Run pytest
+      run: |
+        python -m pytest
+      working-directory: .
 
     - name: Validate Schema
       run: PYTHONPATH=. python -m metrics.resonance_metric --validate-schema-only
