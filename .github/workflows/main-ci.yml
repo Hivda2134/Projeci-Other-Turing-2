@@ -21,7 +21,7 @@ jobs:
           cache: "pip"
 
       - name: Set witness
-        run: echo "WITNESS=c59fdf5" >> $GITHUB_ENV
+        run: echo "WITNESS=d3f6d3e" >> $GITHUB_ENV
 
       - name: Check HEART_PROTOCOL_SALT (warn)
         run: |
