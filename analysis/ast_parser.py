@@ -64,6 +64,9 @@ def parse_symbolic_summary(source_code: str) -> Dict[str, List[str] | Dict[str, 
             if isinstance(cur, ast.Name):
                 parts.append(cur.id)
             return ".".join(reversed(parts))
+        elif isinstance(node.func, ast.Call):
+            # Handle nested calls, e.g., func()()
+            return _name_of_call(node.func)
         return None
 
     class SummaryVisitor(ast.NodeVisitor):

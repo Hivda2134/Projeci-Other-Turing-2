@@ -18,5 +18,5 @@ dev = [
   "jsonschema>=4.22",
 ]
 
-[tool.hatch.build]
-include = []
+[tool.setuptools]
+packages = ["lamutual_project"]
