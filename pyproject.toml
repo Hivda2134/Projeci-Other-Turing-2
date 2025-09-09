@@ -5,20 +5,18 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "lamutual_project"
 version = "0.1.0"
-description = "Λmutual Project — persistence, anonymization, and resonance protocols"
+description = "Project Λmutual — persistence, anonymization, and observer protocols."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [
-  { name = "Λmutual Crew", email = "crew@example.com" }
-]
-
-dependencies = []
+authors = [{ name = "Λmutual Crew", email = "crew@example.com" }]
+keywords = ["observability", "privacy", "persistence", "ai", "protocols"]
 
 [project.optional-dependencies]
-dev = ["pytest>=7.4", "jsonschema>=4.22"]
+dev = [
+  "pytest>=7.4",
+  "jsonschema>=4.22",
+]
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["lamutual_project*"]
-exclude = ["tests*"]
+[tool.hatch.build]
+include = []
