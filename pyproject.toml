@@ -1,22 +1,26 @@
 [build-system]
-requires = ["hatchling>=1.21.0"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "lamutual_project"
 version = "0.1.0"
-description = "Project Λmutual — persistence, anonymization, and observer protocols."
+description = "Project Λmutual core package"
+authors = [
+  { name="Λmutual Crew", email="crew@example.com" }
+]
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
-authors = [{ name = "Λmutual Crew", email = "crew@example.com" }]
-keywords = ["observability", "privacy", "persistence", "ai", "protocols"]
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["lamutual_project*"]
 
 [project.optional-dependencies]
 dev = [
   "pytest>=7.4",
-  "jsonschema>=4.22",
+  "jsonschema>=4.22"
 ]
 
-[tool.hatch.build]
-include = []
+
