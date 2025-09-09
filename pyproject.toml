@@ -16,6 +16,7 @@ keywords = ["observability", "privacy", "persistence", "ai", "protocols"]
 dev = [
   "pytest>=7.4",
   "jsonschema>=4.22",
+  "PyYAML",
 ]
 
 [tool.setuptools]
