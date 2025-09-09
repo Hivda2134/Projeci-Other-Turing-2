@@ -1,12 +1,22 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.21.0"]
 build-backend = "hatchling.build"
 
 [project]
-name = "lmutual"
-version = "0.2.1"
-description = "Collective intelligence & witness protocol"
-dependencies = ["pytest>=7", "jsonschema>=4", "pyyaml>=6"]
+name = "lamutual_project"
+version = "0.1.0"
+description = "Project Λmutual — persistence, anonymization, and observer protocols."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Λmutual Crew", email = "crew@example.com" }]
+keywords = ["observability", "privacy", "persistence", "ai", "protocols"]
 
-[tool.hatch.build.targets.wheel]
-packages = ["."]
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.4",
+  "jsonschema>=4.22",
+]
+
+[tool.hatch.build]
+include = []
