@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import json
-from scripts.piv_core import calculate_piv
+from lamutual_project.piv_core import calculate_piv
 
 def test_piv_determinism():
     events = [
