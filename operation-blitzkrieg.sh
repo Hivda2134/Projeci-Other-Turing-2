@@ -85,8 +85,8 @@ fi
 pyproject_tmp="$(mktemp)"
 cat > "$pyproject_tmp" <<'TOML'
 [build-system]
-requires = ["hatchling>=1.21.0"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "lamutual_project"

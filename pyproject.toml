@@ -5,22 +5,20 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "lamutual_project"
 version = "0.1.0"
-description = "Project Λmutual core package"
-authors = [
-  { name="Λmutual Crew", email="crew@example.com" }
-]
+description = "Λmutual Project — persistence, anonymization, and resonance protocols"
 readme = "README.md"
 requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+  { name = "Λmutual Crew", email = "crew@example.com" }
+]
+
 dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4", "jsonschema>=4.22"]
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["lamutual_project*"]
-
-[project.optional-dependencies]
-dev = [
-  "pytest>=7.4",
-  "jsonschema>=4.22"
-]
-
-
+exclude = ["tests*"]
