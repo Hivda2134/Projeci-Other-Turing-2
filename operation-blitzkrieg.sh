@@ -232,7 +232,7 @@ echo "Wrote $MAIN_CI_PATH"
 ### Git operations
 if [ "$DO_COMMIT" = true ]; then
   echo "Staging changes..."
-  git add "$PYPROJECT_PATH" "$TEST_FILE" "$MAIN_CI_PATH" "$WORKFLOWS_DIR" "$GRAVE_DIR" "$SRC_DIR_DEFAULT" tests
+  git add "$PYPROJECT_PATH" "$TEST_FILE" "$MAIN_CI_PATH" "$WORKFLOWS_DIR" "$GRAVE_DIR" tests
   # Add any other potentially changed files, e.g., from flattening
   git add . # Catch-all for any other generated files
 
