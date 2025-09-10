@@ -1,17 +1,24 @@
-[tool.poetry]
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
 name = "lamutual_project"
 version = "0.1.0"
-description = "Λmutual code-meaning resonance engine"
-authors = ["Kaptan <you@example.com>"]
+description = "Project Λmutual core package"
+authors = [
+  { name = "Λmutual Crew", email = "crew@example.com" }
+]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
 
-[tool.poetry.dependencies]
-python = "^3.11"
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["lamutual_project*"]
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^7.0"
-pyyaml = "^6.0.2"
-jsonschema = "^4.0"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.4",
+  "jsonschema>=4.22"
+]
