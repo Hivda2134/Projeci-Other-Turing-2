@@ -1,0 +1,20 @@
+Collecting pytest
+  Downloading pytest-8.4.2-py3-none-any.whl.metadata (7.7 kB)
+Requirement already satisfied: jsonschema in /home/codespace/.local/lib/python3.12/site-packages (4.24.0)
+Collecting iniconfig>=1 (from pytest)
+  Downloading iniconfig-2.1.0-py3-none-any.whl.metadata (2.7 kB)
+Requirement already satisfied: packaging>=20 in /home/codespace/.local/lib/python3.12/site-packages (from pytest) (25.0)
+Collecting pluggy<2,>=1.5 (from pytest)
+  Downloading pluggy-1.6.0-py3-none-any.whl.metadata (4.8 kB)
+Requirement already satisfied: pygments>=2.7.2 in /home/codespace/.local/lib/python3.12/site-packages (from pytest) (2.19.2)
+Requirement already satisfied: attrs>=22.2.0 in /home/codespace/.local/lib/python3.12/site-packages (from jsonschema) (25.3.0)
+Requirement already satisfied: jsonschema-specifications>=2023.03.6 in /home/codespace/.local/lib/python3.12/site-packages (from jsonschema) (2025.4.1)
+Requirement already satisfied: referencing>=0.28.4 in /home/codespace/.local/lib/python3.12/site-packages (from jsonschema) (0.36.2)
+Requirement already satisfied: rpds-py>=0.7.1 in /home/codespace/.local/lib/python3.12/site-packages (from jsonschema) (0.26.0)
+Requirement already satisfied: typing-extensions>=4.4.0 in /home/codespace/.local/lib/python3.12/site-packages (from referencing>=0.28.4->jsonschema) (4.14.1)
+Downloading pytest-8.4.2-py3-none-any.whl (365 kB)
+Downloading pluggy-1.6.0-py3-none-any.whl (20 kB)
+Downloading iniconfig-2.1.0-py3-none-any.whl (6.0 kB)
+Installing collected packages: pluggy, iniconfig, pytest
+
+Successfully installed iniconfig-2.1.0 pluggy-1.6.0 pytest-8.4.2
